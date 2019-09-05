@@ -95,7 +95,7 @@ parameters:
   the literal character 0x2D (`-`), the sort order is descending. Otherwise, the
   sort order is ascending. This field may be specified multiple times. For
   example, `sort=user.id&sort=-created_at`.
-* `q=`*`Q`*: Perform a full-text search using the query *Q*.
+* `search=`*`Q`*: Perform a full-text search using the query *Q*.
 
 These parameters are hereby standardized and reserved in the API. No API request
 shall repurpose these parameters with different semantics, even for endpoints
@@ -156,8 +156,8 @@ All list endpoints must support the `sort` query parameter; however, it may be
 limited to the default sort order (ascending or descending).
 
 Endpoints are not required to provide any filtering mechanisms, including via
-the `q` parameter. However, if a full-text search is permitted, it must be
-called `q`.
+the `search` parameter. However, if a full-text search is permitted, it must be
+called `search`.
 
 ### Implementation
 
@@ -320,5 +320,5 @@ substantial difficulty.
 
 ## Future possibilities
 
-We may expand the full-text capability of the `q` query parameter to support
-more complex filtering à la ElasticSearch or Solr's query syntax.
+We may expand the full-text capability of the `search` query parameter to
+support more complex filtering à la ElasticSearch or Solr's query syntax.
