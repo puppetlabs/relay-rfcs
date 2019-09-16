@@ -4,7 +4,7 @@
 
 * **Recommenders:** Noah Fontes
 * **Agreers:** Rick Lane, Kyle Terry
-* **Performers:** *TBD*
+* **Performers:** Rick Lane, Kyle Terry
 * **Inputers:** Brad Heller
 * **Deciders:** Rick Lane, Kyle Terry
 
