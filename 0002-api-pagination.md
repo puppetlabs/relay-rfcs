@@ -4,7 +4,7 @@
 
 * **Recommenders:** Manny Batule, Noah Fontes
 * **Agreers:** Noah Muldavin, Sebastian Prokuski
-* **Performers:** *TBD*
+* **Performers:** [PN-259](https://tickets.puppetlabs.com/browse/PN-259)
 * **Inputers:** Brad Heller, Rick Lane, Kyle Terry, Geoff Woodburn
 * **Deciders:** Rick Lane, Noah Muldavin, Kyle Terry
 
