@@ -1,4 +1,4 @@
-# Workflow conditionals (2020-02-03)
+# Workflow Conditions (2020-02-03)
 
 ## Stakeholders
 
@@ -13,8 +13,9 @@
 There is a lack of user-defined reactivity to variable data compared with a logical expression during a workflow run.
 
 Some examples include:
+
 * A user cannot define an alternate branch of steps to take if their environment is staging as opposed to production.
-* A user cannot define what happens given the output of a previous step without the use of baking all logic into a single step with a script. Say we have a GKE provisioner that creates a k8s cluster and does a lot of heavy handed resource bootstrapping, we would want to skip all those steps if the cluster already exists and is running successfully.
+* A user cannot define what happens given the output of a previous step without the use of baking all logic into a single step with a script.
 
 ## Summary
 
@@ -28,29 +29,14 @@ It might reduce support requests because it encourages smaller steps and encoura
 
 ## Product-level explanation
 
-This RFC introduces the new keyword `when` to the YAML dictionary that defines a step in a workflow file. This keyword allows a user to do a logical check using new functions on any data available to a step. This can include Parameters, Outputs and Secrets. This explicitly does not include success/failure of individual steps or the workflow (not at this time). Approvals may or may not be included, but is not the primary motivation at this time.
+This RFC introduces the new keyword `when` to the YAML dictionary that defines a step in a workflow file. This keyword allows a user to do a logical check using new functions on any data available to a step. Initially this includes Parameters and Outputs.
 
-The exact specifics of the `when` syntax is undecided at this time. Compare with [Argo](https://github.com/argoproj/argo/tree/master/examples#conditionals) and potentially [Tekton](https://docs.google.com/document/d/1R6WlDMC3vuY5StiEIFg5MP18n7_kOa1QHxB10CRlbw0). More citations needed.
+Initials functions include:
 
-Possible example functions may include:
 * `!Fn.equals`
 * `!Fn.notEquals`
-* `!Fn.true`
-* `!Fn.false`
 
-The `when` keyword is considered an unordered list of implicit `and` conditions, without any support for `or`, `not`, etc. No logic will be performed to validate the efficacy of the conditional logic. The following examples would never progress, produce no errors, and eventually timeout:
-
-```yaml
-- when:
-  - !Fn.equals [[!Parameter environment], "production"]
-  - !Fn.equals [[!Parameter environment], "staging"]
-```
-
-```yaml
-- when:
-  - !Fn.notEquals [[!Parameter environment], "production"]
-  - !Fn.equals [[!Parameter environment], "production"]
-```
+The `when` keyword is considered an unordered list of implicit `and` conditions, without any support for `or`, `not`, etc.
 
 ## Engineering-level explanation
 
@@ -69,28 +55,45 @@ steps:
   spec:
     ...
 
-- name: bootstrap-cluster-resources
-  image: mycompany/my-cluster-bootstrapper:latest
+- name: deploy-common-resources
+  image: projectnebula/gke-cluster-deployer:latest
+  spec:
+    ...
+  dependsOn:
+  - create-cluster
+
+- name: deploy-staging-resources
+  image: projectnebula/gke-cluster-deployer:latest
+  when:
+  - !Fn.equals [[!Parameter environment], "staging"]
+  spec:
+    ...
+  dependsOn:
+  - deploy-common-resources
+
+- name: deploy-production-resources
+  image: projectnebula/gke-cluster-deployer:latest
   when:
   - !Fn.equals [[!Parameter environment], "production"]
-  - !Fn.true [!Output create-cluster, cluster-exists]
   spec:
     ...
+  dependsOn:
+  - deploy-common-resources
 
-- name: cluster-bootstrap-cleanup
-  image: mycompany/my-cluster-bootstrapp-cleaner:latest
-  dependsOn: [bootstrap-cluster-resources]
+- name: deploy-monitoring
+  image: projectnebula/gke-cluster-deployer:latest
+  when:
+  - !Fn.notEquals [[!Output create-cluster, environment], "dev"]
   spec:
     ...
+  dependsOn:
+  - deploy-common-resources
+
 ```
 
-`Fn.equals`: is a function available in the workflow yaml that returns true if the left side is equal to the right side. It takes exactly 2 arguments. Both arguments MUST be comparable types. Comparable types are `string`, `integer`, `float`.
+`Fn.equals`: is a function available in the workflow yaml that returns true if the left side is equal to the right side. It takes exactly 2 arguments. Both arguments MUST be comparable types. Comparable types are `string`, `integer`, `float`, and `boolean`.
 
 `Fn.notEquals`: is a function similar to `Fn.equals` that returns true if the left side is not equal to the right side.
-
-`Fn.true`: is a function available in the workflow yaml that returns true if the given input evaluates to true. It takes a single argument that must resolve to type `boolean`.
-
-`Fn.false`: is a function similar to `Fn.true` that returns true if the given input evaluates to false. It takes a single argument that must resolve to type `boolean`.
 
 These functions will be declared in [nebula-sdk](https://github.com/puppetlabs/nebula-sdk) in the [workflow spec fnlib](https://github.com/puppetlabs/nebula-sdk/tree/master/pkg/workflow/spec/fnlib) package.
 
@@ -100,23 +103,48 @@ In accordance with current processing, once the workflow yaml is received via th
 
 Since Tekton's condition resources are a bit limited at the moment, this will require a custom image to be created for the Condition resources's check. This pattern has already been established and validated as part of the approval logic. The current approval image may be expanded to handle more generic conditions, or a similar image may be created specifically for conditions.
 
-The list of conditionals for evaluation will be passed to the image. The approval image is already capable of contacting the metadata-api to handle the requisite data for comparison, and a similar pattern will be used for conditions. The exact mechanism for passing and/or accessing the data are implementation details that will be determined later.
+The list of conditions for evaluation will be passed to the image. The approval image is already capable of contacting the metadata-api to handle the requisite data for comparison, and a similar pattern will be used for conditions. The exact mechanism for passing and/or accessing the data are implementation details that will be determined later.
 
 ## Drawbacks
 
-Tekton Conditions are rudimentary at the moment, and have not been fully implemented, but that does not represent either a blocker or a reason not to use them.
+ No logic will be performed to validate the efficacy of the conditional logic. The following examples would never progress, produce no errors, and eventually timeout:
+
+```yaml
+- when:
+  - !Fn.equals [[!Parameter environment], "production"]
+  - !Fn.equals [[!Parameter environment], "staging"]
+```
+
+```yaml
+- when:
+  - !Fn.notEquals [[!Parameter environment], "production"]
+  - !Fn.equals [[!Parameter environment], "production"]
+```
+
+Initially, steps that support conditions will not be able to converge on a common step later in the workflow.
+
+Secrets will not be supported (initially), due their nature, and any such use would likely reference parameters disguised as secrets. Exposing secrets for this purpose would potentially lead to security concerns.
+
+The following are not supported as conditions at this time (but likely will be in the future):
+
+* The outcome of steps or the workflow (success, failure, etc.)
+* The outcome of approvals (approved, rejected, etc.)
+* The step/workflow status (running, completed, cancelled, etc.)
+
+The use and context of the `dependsOn` keyword will later transition to be a specific subset of `when` processing that implies the default (successful) outcome condition. Other similar features and keywords may be added to avoid increased complexity while retaining full flexibility; potentially `onSuccess` or `onFailure` for example. `dependsOn` will considered to be in aggregate with any other `when` conditions.
 
 ## Rationale and alternatives
 
 ### Why is this design the best in the space of possible designs?
 
-It leverages both things we have already built and things Tekton already provides. Introducing a single keyword capable of using all data mechanisms (Outputs, Secrets, Parameters) that already exist means we can move fast when creating the feature and keep it familiar with the rest of the workflow.
+It leverages both things we have already built and things Tekton already provides. Introducing a single keyword capable of using all data mechanisms that already exist means we can move fast when creating the feature and keep it familiar with the rest of the workflow.
 
 ### What other designs have been considered and what is the rationale for not choosing them?
 
-TODO
+Other similar syntax:
 
-We have not fully determined what the exact syntax for this will be. Nor have we determined how this will relate to potentially similar workflow functionality (evaluating success/failure, approvals, etc.).
+* [Argo](https://github.com/argoproj/argo/tree/master/examples#conditionals)
+* [Tekton](https://docs.google.com/document/d/1R6WlDMC3vuY5StiEIFg5MP18n7_kOa1QHxB10CRlbw0)
 
 ### What is the impact of not doing this?
 
@@ -137,10 +165,12 @@ task-yes    task-no
 
 ## Unresolved questions
 
-TODO
-
-Primarily the outstanding concerns with the exact workflow syntax.
+None.
 
 ## Future possibilities
 
-TODO
+* More condition functions may be added in the future.
+* The outcome of a step (success/failure) may be added as conditions later.
+* The outcome of approvals (approved, rejected) may be added as conditions later.
+* The status of a step may be added as conditions later.
+* External events will eventually be supported by this same system/design. For example, manual or automatic approvals from Slack, PRs, JIRA, etc. will be possible (preferably as integrations, without explicitly relying on a waiting step).
