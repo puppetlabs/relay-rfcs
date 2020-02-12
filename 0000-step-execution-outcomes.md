@@ -95,27 +95,29 @@ when:
 
 ### Outcomes
 
-There are two global outcomes, `pending` (unresolved) and `indeterminate`
-(resolved), which are automatically set by the Nebula step supervisor. A step
-has a `pending` outcome if it is in any unresolved state other than `running`,
-and a step has an `indeterminate` outcome if it is in any resolved state other
-than `completed` and no outcome has been provided yet.
+There are two outcomes that apply to all step types: `pending` (unresolved) and
+`indeterminate` (resolved). They are automatically chosen by the Nebula step
+supervisor as needed.
 
 Any time after a step enters the `running` state and before it enters the
-`completed` state, it may define its outcome. Once an outcome is defined, it may
-not be changed.
+`completed` state, it may **set** its outcome according to its step type.
+Once an outcome is set, it may not be changed.
 
-Each step type has a particular set of fixed possible outcomes that part of the
-definition of the type. In addition, for each step type, one or more outcomes
-must be **desired**, which represents the default behavior for `dependsOn`.
+If no outcome has been set for a given step, the following rules apply to
+determine the outcome:
+
+* If the step is in any unresolved state, its outcome is `pending`.
+* If the step is in any resolved state, its outcome is `indeterminate`.
+
+Each step type has a particular set of fixed possible outcomes, one or more of which must be **desired**, the default behavior when matching in `dependsOn`.
 
 We define the outcomes for `container` and `approval` step types:
 
 * `container`: `success` (desired), `failure`
 * `approval`: `approved` (desired), `rejected`
 
-We define a new YAML tag, `!Outcome`, to refer to the resolved outcome of a
-step. For example, to run a step when another step fails:
+We define a new YAML tag, `!Outcome`, to refer to the outcome of a step. For
+example, we may want to run a step when another step has failed:
 
 ```yaml
 when:
@@ -210,7 +212,7 @@ which use a `status` field to roughly represent this information:
 
 ### Additional considerations
 
-It is possible that in the future the outcome of a step will be known sometime
+It is possible that in the future the outcome of a step will be known long
 before the step is completed. For example, a step may succeed and then perform
 some cleanup work.
 
