@@ -125,8 +125,9 @@ The new step statuses are:
   step transitions directly to completed.
 * `success` (resolved): All work associated with this step completed in a way
   the step semantically deems successful.
-* `failure` (resolved): All work associated with this step completed in a way
-  the step semantically deems unsuccessful.
+* `failure` (resolved): Either all work associated with this step completed in a
+  way the step semantically deems unsuccessful or an author-imposed policy (such
+  as a timeout) prevents the step from completing.
 * `system-error` (resolved): If an error occurs that causes a serious lack of
   accounting for the management of a step, the step transitions to a
   `system-error` status. This generally implies a hardware failure, Kubernetes
@@ -134,7 +135,7 @@ The new step statuses are:
   problem with executing the run. It is different from a `failure` status, which
   indicates that the work being supervised failed, not that the supervision
   itself failed. When a step enters a `system-error` status, the entire run is
-  halted and transitions to a `failure` status.
+  halted and is assigned a `system-error` outcome.
 * `skipped` (resolved): If either the `when`-conditions are not satisfied or the
   run is cancelled prior to the step running, the step transitions to the
   `skipped` status.
@@ -164,17 +165,18 @@ The new run statuses are:
 * `initializing` (unresolved): The run resource has been created, but the
   execution backend (Tekton, metadata API) is not running yet.
 * `in-progress` (unresolved): The run is executing.
-* `complete` (resolved): All steps associated with this run reached a resolved
+* `complete` (resolved): All actions associated with this run reached a resolved
   status.
 
 Additionally, we express the **outcome** of a run independently of its status:
 
-* `success`: All steps associated with this run reached a resolved status
-  without an instruction to the run to transition to any other outcome. Note
-  that this does not necessarily mean that each step succeeded.
-* `failure`: All steps have a resolved status and one or more steps implicitly
-  or explicitly informed this run that it cannot be considered successful.
-* `system-error`: One or more system errors occurred when executing the run.
+* `success`: All actions associated with this run reached a resolved status
+  without an instruction to the run to assign any other outcome. Note that this
+  does not necessarily mean that each action succeeded.
+* `failure`: One or more actions implicitly or explicitly informed this run that
+  it cannot be considered successful.
+* `system-error`: One or more system errors occurred (see above, as the same
+  logic applies for steps) when executing the run.
 * `cancelled`: A user agent requested cancellation of the run.
 
 We discuss step failure below; however, the other resolved statuses of steps impact the run in the following ways:
@@ -189,12 +191,12 @@ We discuss step failure below; however, the other resolved statuses of steps imp
 #### Implications of step failure
 
 *Note:* Queries have different implications for run state than steps. Queries
-are designed to fail in a way that cannot be reconciled or to provide replies. A
-failure of a query to provide its replies causes a terminal failure of a run.
+are designed either to provide output data as replies or to fail in a way that
+cannot be reconciled. A failure of a query to provide its replies causes a
+terminal failure of a run.
 
-We intend to maintain backward compatibility with our current implementation,
-provided that workflow authors are not using conditions with `!Status`, which
-has the following behavior:
+For step execution, we intend to maintain backward compatibility with our
+current implementation, which has the following behavior:
 
 1. If a step fails:
    1. The run is assigned the outcome `failure`.
