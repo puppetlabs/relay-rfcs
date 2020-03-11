@@ -153,55 +153,35 @@ when:
 - !Fn.equals [!Status some-step, failure]
 ```
 
-### API model
-
-We propose an update to the API to propagate this information to users. We amend
-the `status` property of the `AnyWorkflowRunStepState` schema:
-
-```yaml
-AnyWorkflowRunStepState:
-  type: object
-  properties:
-    status:
-      type: string
-      description: Execution status of this step
-      enum:
-      - initializing
-      - pending
-      - in-progress
-      - success
-      - failure
-      - system-error
-      - skipped
-      - cancelled
-      example: pending
-    # ...
-```
-
 ### Run state
 
 One of the consequences of adding the ability to form conditions around resolved
 statuses of steps is that the failure of a step no longer has a one-to-one
 correlation to the failure of a run.
 
-For clarity, the statuses that apply to runs are:
+The new run statuses are:
 
 * `initializing` (unresolved): The run resource has been created, but the
   execution backend (Tekton, metadata API) is not running yet.
 * `in-progress` (unresolved): The run is executing.
-* `success` (resolved): All steps associated with this run reached a resolved
-  status without an instruction to the run to transition to any other status.
-  Note that this does not necessarily mean that each step succeeded.
-* `failure` (resolved): All steps have a resolved status and one or more steps
-  implicitly or explicitly informed this run that it cannot be considered
-  successful.
-* `cancelled` (resolved): A user agent requested cancellation of the run.
+* `complete` (resolved): All steps associated with this run reached a resolved
+  status.
+
+Additionally, we express the **outcome** of a run independently of its status:
+
+* `success`: All steps associated with this run reached a resolved status
+  without an instruction to the run to transition to any other outcome. Note
+  that this does not necessarily mean that each step succeeded.
+* `failure`: All steps have a resolved status and one or more steps implicitly
+  or explicitly informed this run that it cannot be considered successful.
+* `system-error`: One or more system errors occurred when executing the run.
+* `cancelled`: A user agent requested cancellation of the run.
 
 We discuss step failure below; however, the other resolved statuses of steps impact the run in the following ways:
 
 * `success`: No impact.
-* `system-error`: The run is immediately cancelled and transitions to a
-  `failure` status.
+* `system-error`: The run is immediately cancelled and assigned the outcome
+  `system-error`.
 * `skipped`: No impact.
 * `cancelled`: No impact (because cancellation can only be initiated from a
   run).
@@ -209,7 +189,7 @@ We discuss step failure below; however, the other resolved statuses of steps imp
 #### Implications of step failure
 
 *Note:* Queries have different implications for run state than steps. Queries
-are designed to either fail with a `system-error` or to provide replies. A
+are designed to fail in a way that cannot be reconciled or to provide replies. A
 failure of a query to provide its replies causes a terminal failure of a run.
 
 We intend to maintain backward compatibility with our current implementation,
@@ -217,7 +197,7 @@ provided that workflow authors are not using conditions with `!Status`, which
 has the following behavior:
 
 1. If a step fails:
-   1. The run fails.
+   1. The run is assigned the outcome `failure`.
    1. Steps that are currently `in-progress` continue until they reach a
       resolved status.
    1. Any steps that are still `pending` are transitioned to `skipped`.
@@ -228,7 +208,7 @@ using conditions:
 2. If (a) a step fails, (b) a direct dependent specifically references its
    status using `!Status` in a condition, and (c) the nearest predicate to the
    status reference evaluates to `true`:
-   1. The run *does not* fail.
+   1. There is no change to the run's outcome.
    1. The execution of other steps is unaffected by the failure of this step,
       except to the extent that they reference its status.
 
@@ -268,6 +248,57 @@ We may want to add a `collect` failure mode that aggregates errors and
 eventually causes a run to have a `failure` status, but allows other steps in
 the workflow to continue executing. We leave this consideration for a future
 RFC.
+
+### API model
+
+We propose an update to the API to propagate this information to users. We amend
+the `status` property of the `AnyWorkflowRunStepState` schema:
+
+```yaml
+AnyWorkflowRunStepState:
+  type: object
+  properties:
+    status:
+      type: string
+      description: Execution status of this step
+      enum:
+      - initializing
+      - pending
+      - in-progress
+      - success
+      - failure
+      - system-error
+      - skipped
+      - cancelled
+      example: pending
+    # ...
+```
+
+We propose to amend the `WorkflowRunStateSummary` schema as follows:
+
+```yaml
+WorkflowRunStateSummary:
+  type: object
+  properties:
+    status:
+      type: string
+      description: Current status of the run
+      enum:
+      - initializing
+      - in-progress
+      - complete
+    outcome:
+      type: string
+      description: The outcome of the run
+      enum:
+      - success
+      - failure
+      - system-error
+      - cancelled
+    # ...
+```
+
+The `outcome` property will not be present until an outcome is assigned.
 
 ### Additional considerations
 
