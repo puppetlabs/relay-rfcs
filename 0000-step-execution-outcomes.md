@@ -26,8 +26,8 @@ different rules that have more clarity for end users.
 ## Motivation
 
 This change is relatively simple technically (updating some state fields in our
-Kubernetes workflow resource) and provides a great deal of clarity for
-implementers of workflow visualization UIs and end users.
+Kubernetes resources) and provides a great deal of clarity for implementers of
+workflow visualization UIs and end users.
 
 ## Product-level explanation
 
@@ -35,21 +35,24 @@ We address the issue of different outcomes per step type (that is, container
 steps having `success` and `failure` but approval steps having `accepted` and
 `rejected`) by making the definition of a step more strict.
 
-This RFC defines a **step** as a unit of computational work. Other processes,
-such as approvals and triggers, are not steps, and shall not be included with
-steps in workflows. We expect there to be multiple step types in the future (for
-example, groups of steps), but they will all have a common `success` or
-`failure` outcome.
+This RFC defines a **step** as a unit of computational **work**. Other
+processes, such as approvals and triggers, are not steps, and shall not be
+included with steps in workflows. We expect there to be multiple step types in
+the future (for example, groups of steps), but they will all have a common
+`success` or `failure` outcome.
 
-### Asks
+### Actions
 
 As it relates to our current implementation, we introduced the concept of step
-types to support approvals, a non-work process. We therefore propose a new
-generic structure for approvals, **asks**, that is external to, and referential
-to, steps. We believe this will create a clearer user experience. A separate RFC
-will address the technical implementation of asks, but we highlight the change
-here because we eliminate the `approved` (expressed as `success`) and `rejected`
-step statuses as part of this RFC.
+types to support approvals, a *non-work* process. We therefore propose a new
+generic structure for approvals, **queries**, that is external to, and
+referential to, steps. We believe this will create a clearer user experience. A
+separate RFC will address the technical implementation of queries, but we
+highlight the change here because we eliminate the `approved` (expressed as
+`success`) and `rejected` step statuses as part of this RFC.
+
+Holistically, steps and queries belong to a category of atomic functionality we
+refer to as **actions**.
 
 In summary, today we have a YAML document with an approval step:
 
@@ -66,22 +69,22 @@ steps:
 We propose to replace this with a more substantial feature:
 
 ```yaml
-asks:
+queries:
 - name: my-gate
-  image: projectnebula/ask-manual-gate
+  image: projectnebula/query-manual-gate
   spec:
     question: !Fn.concat ['Do you want to deploy ', !Parameter project, '?']
 
 steps:
 - name: deploy
-  when: !Answer my-gate
+  when: !Reply my-gate
   image: projectnebula/terraform
   # ...
 ```
 
-This allows customers to bring their own asks as long as they conform to our
-asks API. (In this case, we use our own manual gate image, which may also be the
-default.)
+This allows customers to bring their own queries as long as they conform to our
+queries API. (In this case, we use our own manual gate image, which may also be
+the default.)
 
 ## Engineering-level explanation
 
@@ -91,8 +94,8 @@ of which are rigorously defined.
 
 We propose to amend the set of execution statuses possible for all steps to be
 defined by a single FSM. In addition, we propose removing non-work steps
-entirely as well as the `rejected` status (see the discussion in the
-product-level explanation).
+entirely as well as the `rejected` (see the discussion in the product-level
+explanation) and `timed-out` (specialized case of `failure`) statuses.
 
 ### Resolution
 
@@ -111,8 +114,8 @@ short-circuit).
 
 The new step statuses are:
 
-* `initializing` (unresolved): The workflow run resource has been created, but
-  the execution backend (Tekton, metadata API) is not running yet.
+* `initializing` (unresolved): The run resource has been created, but the
+  execution backend (Tekton, metadata API) is not running yet.
 * `pending` (unresolved): The execution backend started and the step is waiting
   for all of its `when`-conditions to be satisfiable (*not* satisfied) before
   running.
@@ -128,29 +131,26 @@ The new step statuses are:
   accounting for the management of a step, the step transitions to a
   `system-error` status. This generally implies a hardware failure, Kubernetes
   error, metadata API error, or other management error that indicates a serious
-  problem with executing the Nebula workflow. It is different from a `failure`
-  status, which indicates that the work being supervised failed, not that the
-  supervision itself failed. When a step enters a `system-error` status, the
-  entire workflow is halted and the workflow run is considered indeterminate.
+  problem with executing the run. It is different from a `failure` status, which
+  indicates that the work being supervised failed, not that the supervision
+  itself failed. When a step enters a `system-error` status, the entire run is
+  halted and transitions to a `failure` status.
 * `skipped` (resolved): If either the `when`-conditions are not satisfied or the
-  workflow is cancelled prior to the step running, the step transitions to the
+  run is cancelled prior to the step running, the step transitions to the
   `skipped` status.
-* `timed-out` (resolved): If the step is `in-progress` and reaches a user- or
-  system-configured timeout, it may be terminated and transition to the
-  `timed-out` status.
-* `cancelled` (resolved): If the user requests workflow cancellation while a
-  step is in a `in-progress` status, the underlying process is immediately
-  interrupted and transitioned to this status.
+* `cancelled` (resolved): If a user agent requests cancellation while a step is
+  in an `in-progress` status, the underlying process is immediately interrupted
+  and transitioned to this status.
 
 These are a superset of the existing step statuses, so this serves to clarify
 their current meaning as well as reduce ambiguity by adding additional statuses.
 
 We define a new YAML tag, `!Status`, to refer to the resolved (terminal)
-status of a step. For example, we may want to run a particular step to perform cleanup work if another step timed out:
+status of a step. For example, we may want to run a particular step to perform cleanup work if another step failed:
 
 ```yaml
 when:
-- !Fn.equals [!Status some-step, timed-out]
+- !Fn.equals [!Status some-step, failure]
 ```
 
 ### API model
@@ -164,7 +164,7 @@ AnyWorkflowRunStepState:
   properties:
     status:
       type: string
-      description: Execution status of this workflow step
+      description: Execution status of this step
       enum:
       - initializing
       - pending
@@ -173,11 +173,101 @@ AnyWorkflowRunStepState:
       - failure
       - system-error
       - skipped
-      - timed-out
       - cancelled
       example: pending
     # ...
 ```
+
+### Run state
+
+One of the consequences of adding the ability to form conditions around resolved
+statuses of steps is that the failure of a step no longer has a one-to-one
+correlation to the failure of a run.
+
+For clarity, the statuses that apply to runs are:
+
+* `initializing` (unresolved): The run resource has been created, but the
+  execution backend (Tekton, metadata API) is not running yet.
+* `in-progress` (unresolved): The run is executing.
+* `success` (resolved): All steps associated with this run reached a resolved
+  status without an instruction to the run to transition to any other status.
+  Note that this does not necessarily mean that each step succeeded.
+* `failure` (resolved): All steps have a resolved status and one or more steps
+  implicitly or explicitly informed this run that it cannot be considered
+  successful.
+* `cancelled` (resolved): A user agent requested cancellation of the run.
+
+We discuss step failure below; however, the other resolved statuses of steps impact the run in the following ways:
+
+* `success`: No impact.
+* `system-error`: The run is immediately cancelled and transitions to a
+  `failure` status.
+* `skipped`: No impact.
+* `cancelled`: No impact (because cancellation can only be initiated from a
+  run).
+
+#### Implications of step failure
+
+*Note:* Queries have different implications for run state than steps. Queries
+are designed to either fail with a `system-error` or to provide replies. A
+failure of a query to provide its replies causes a terminal failure of a run.
+
+We intend to maintain backward compatibility with our current implementation,
+provided that workflow authors are not using conditions with `!Status`, which
+has the following behavior:
+
+1. If a step fails:
+   1. The run fails.
+   1. Steps that are currently `in-progress` continue until they reach a
+      resolved status.
+   1. Any steps that are still `pending` are transitioned to `skipped`.
+
+We propose the following implicit behavior rule that authors will expect when
+using conditions:
+
+2. If (a) a step fails, (b) a direct dependent specifically references its
+   status using `!Status` in a condition, and (c) the nearest predicate to the
+   status reference evaluates to `true`:
+   1. The run *does not* fail.
+   1. The execution of other steps is unaffected by the failure of this step,
+      except to the extent that they reference its status.
+
+As an example, this implicit behavior applies if an author uses the following
+`when` conditions:
+
+```yaml
+when: !Fn.equals [!Status step-a, failure]
+---
+when: !Fn.notEquals [!Status step-a, success]
+```
+
+We concede that this implicit behavior may not be sufficient for all use cases,
+so we introduce a new marker for steps, **failure mode**, to which we ascribe
+two possible values, `auto` or `ignore`. The default `auto` value provides the
+implicit behavior described above. The `ignore` value causes the failure of the
+step to never cause the run to fail. Of course, dependent steps that are
+conditioned on a success status will be transitioned to `skipped`.
+
+From an authoring perspective, we group this under an umbrella term of
+step-specific **policies**, which in the future may include instructions for
+retrying the step, execution time limits, and other administrative rules.
+
+For example:
+
+```yaml
+steps:
+- name: never-fails
+  image: alpine
+  input:
+  - exit 1
+  policies:
+    failureMode: ignore
+```
+
+We may want to add a `collect` failure mode that aggregates errors and
+eventually causes a run to have a `failure` status, but allows other steps in
+the workflow to continue executing. We leave this consideration for a future
+RFC.
 
 ### Additional considerations
 
