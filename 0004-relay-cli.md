@@ -95,7 +95,7 @@ Verbosity:
 * `--debug` - present maximally verbose output, to aid in debugging if something is broken (i.e. showing HTTP payload/bodies)
 
 Help:
-* `--help` - show contextual help based on the user's input thus far (run at the top level, should show nouns and global flags; run after a noun+verb, should provide positional arguments, noun-specific and global flags). `relay` without arguments should display the top-level help text and `relay help noun` should be equivalent to `relay noun --help`
+* `--help` - show contextual help based on the user's input thus far (run at the top level, should show nouns and global flags; run after a noun+verb, should provide positional arguments, noun-specific and global flags). `relay` without arguments should display the top-level help text and `relay help noun` should be equivalent to `relay noun --help`. Help text should be brief (a screenful of around 40 lines max) and provide context-aware links to long form documentation on the web where possible.
 
 Interactivity:
 * `--color`/`--no-color` - forcibly enable/disable color and emoji in output, overriding the tool's detection of interactivity
@@ -143,6 +143,10 @@ add:
 * `--service` - URL to connect to
 * `--user` - id to authenticate to the remote service with
 * `--pass` - password/credentials to provide to the remote service (XXX maybe a bad idea... but not sure how else you'd do this non-interactively)
+
+show:
+* `[positional]` - display details about this connection
+* `--watch` - follow events as they come in from this connection
 
 ### devel
 
@@ -254,10 +258,10 @@ A workflow is a sequenced collection of actions, parameters, and metadata that a
 
 * `add` - creates a workflow on the service based on a local file
 * `delete` - removes a workflow from the service
-* `edit` - downloads a named workflow and opens it for editing
+* `download` - downloads a named workflow and opens it for editing
 * `list` - enumerate available workflows
 * `replace` - replace a named workflow on the service with a version stored locally on the user's filesystem
-* `run` - execute a named workflow 
+* `run` - execute a named workflow; shouldn't block on execution but rather return a run ID and URL to link to GUI
 
 #### Contextual arguments
 
@@ -270,7 +274,7 @@ A workflow is a sequenced collection of actions, parameters, and metadata that a
 * `[workflowname]` - prompt to remove the named workflow from the service
 * `--yes` - (global) avoid prompting to warn about deletion, just do it
 
-`edit`:
+`download`:
 * `[workflowname]` - download the current version of the workflow for editing
 * `--file [output filename]` - where to save the file on the filesystem; should also support `-` for stdout
 
