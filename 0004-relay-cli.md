@@ -3,10 +3,10 @@
 ## Stakeholders
 
 * **Recommenders:** Eric0 
-* **Agreers:** 
-* **Performers:** 
-* **Inputers:** 
-* **Deciders:** 
+* **Agreers:** Kyle Terry, Noah Fontes
+* **Performers:** Kyle Terry
+* **Inputers:** Kenaz, team
+* **Deciders:** Noah Fontes
 
 ## Problem
 
@@ -62,7 +62,7 @@ relay
 │  └── login,logout
 ├── connection - manage stored authenticated connections to external services
 │  ├── add,delete,edit,list,show
-│  └── test
+│  └── verify
 ├── devel - operations useful for content authors/editors are aggregated here
 │  ├── init
 │  ├── new
@@ -125,7 +125,7 @@ logout, show:
 
 ### connection 
 
-This noun manages authenticated connections to an external service, such as an API token or password. There's no affordance for creating an account through this; we expect that will be done exclusively through the web interface. The connection information should be stored in a `$HOME/.relay` directory on Mac/Linux and XXX (equivalent location) on Windows.
+This noun manages authenticated connections to an external service, such as an API token or password. There's no affordance for creating an account through this; we expect that will be done exclusively through the web interface. 
 
 #### Usage
 
@@ -146,7 +146,6 @@ add:
 
 show:
 * `[positional]` - display details about this connection
-* `--watch` - follow events as they come in from this connection
 
 ### devel
 
@@ -307,7 +306,7 @@ Many of the design principles draw from JD Welch's work on [Puppet-NoGUI](https:
 
 ### What other designs have been considered and what is the rationale for not choosing them?
 
-XXX
+There are lot of individual design decisions in building the CLI, so the question isn't easy to answer directly. Most of the design guidance here came from emerging best practices for modern command line tools, particularly those in the infrastructure space like Pulumi, Sysdig, Heroku, and git. 
 
 ### What is the impact of not doing this?
 
@@ -315,7 +314,7 @@ We'd restrict the usability of it to just GUI features, which are tougher and sl
 
 ### What specific risks are associated with this design?
 
-[...]
+Users might not find it delightful, but one of the benefits of CLI development is that is easy to iterate and change things to be more appealing. It's also a good opportunity to encourage some open-source community contributions because it there is a relatively low barrier to entry to work on it. 
 
 ## Success criteria
 
