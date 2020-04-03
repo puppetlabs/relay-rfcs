@@ -195,24 +195,24 @@ are designed either to provide output data as replies or to fail in a way that
 cannot be reconciled. A failure of a query to provide its replies causes a
 terminal failure of a run.
 
-For step execution, we intend to maintain backward compatibility with our
-current implementation, which has the following behavior:
+Generally, if a step fails, we assign the run the outcome `failure`. This does
+not affect the execution of other steps except to the extent that they reference
+the failing step's status.
 
-1. If a step fails:
-   1. The run is assigned the outcome `failure`.
-   1. Steps that are currently `in-progress` continue until they reach a
-      resolved status.
-   1. Any steps that are still `pending` are transitioned to `skipped`.
+*Note:* We leave open the possibility to add customizable behavior upon outcome
+assignment, including immediate termination of the run and skipping any pending
+steps. These future behaviors are outside the scope of this RFC.
 
-We propose the following implicit behavior rule that authors will expect when
-using conditions:
+Authors will expect sensible implicit behavior when referencing a step's status
+in a condition. In particular, when a step's execution is conditioned on the
+failure of another step, run outcome should be *unaffected* by the dependency's
+failure. A run's outcome is not assigned `failure` if the following statements
+are true when a step fails:
 
-2. If (a) a step fails, (b) a direct dependent specifically references its
-   status using `!Status` in a condition, and (c) the nearest predicate to the
-   status reference evaluates to `true`:
-   1. There is no change to the run's outcome.
-   1. The execution of other steps is unaffected by the failure of this step,
-      except to the extent that they reference its status.
+1. A direct dependent of the step specifically references its status using
+   `!Status` in a condition.
+2. The nearest predicate to the status reference, including transitive
+   evaluation of unary not operations, evalutes to `true`.
 
 As an example, this implicit behavior applies if an author uses the following
 `when` conditions:
