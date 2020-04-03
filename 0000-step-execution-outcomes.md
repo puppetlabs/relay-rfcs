@@ -25,9 +25,9 @@ different rules that have more clarity for end users.
 
 ## Motivation
 
-This change is relatively simple technically (updating some state fields in our
-Kubernetes resources) and provides a great deal of clarity for implementers of
-workflow visualization UIs and end users.
+This change provides a great deal of clarity for implementers of workflow
+visualization UIs and end users. It also sets out a set of standard behaviors
+for runs, replacing the ad-hoc behaviors we inherit from Tekton today.
 
 ## Product-level explanation
 
@@ -246,7 +246,7 @@ steps:
     failureMode: ignore
 ```
 
-We may want to add a `collect` failure mode that aggregates errors and
+*Note:* We may want to add a `collect` failure mode that aggregates errors and
 eventually causes a run to have a `failure` status, but allows other steps in
 the workflow to continue executing. We leave this consideration for a future
 RFC.
@@ -317,3 +317,18 @@ dependsOn: step-a
 ```yaml
 when: !Fn.equals [!Status step-a, success]
 ```
+
+### Work
+
+| Component | Size | Priority | Description |
+|-----------|------|----------|-------------|
+| Controller | M | Medium | Implement new step statuses and propagate in Run resource status |
+| SDK | M | Medium | Determine whether expression evaluation is resolvable and propagate to evaluation results |
+| API | S | Medium | Propagate new step statuses |
+| UI | S | Low | Propagate new step statuses |
+| CLI | S | Low | Propagate new step statuses |
+| Core | L | Low | Implement governance to manage step failure in a Tekton environment |
+| Controller | M | Low | Implement run outcomes and propagate in Run resource status |
+| API | S | Low | Propagate run outcomes |
+| UI | M | Low | Differentiate between run statuses and outcomes |
+| CLI | S | Low | Differentiate between run statuses and outcomes |
