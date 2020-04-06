@@ -57,8 +57,6 @@ It's useful to have conventions that make the tool behave consistently and "intu
 ```
 relay
 ├── auth - authenticate to the service
-│  ├── list,show
-│  ├── select
 │  └── login,logout
 ├── connection - manage stored authenticated connections to external services
 │  ├── add,delete,edit,list,show
@@ -108,11 +106,14 @@ This noun operates on the user's authentication against the Relay service.
 
 #### Usage
 
-* `list` - enumerates existing authentication tokens, or returns a hint to `relay auth login` if none exist
-* `login` - accepts a positional argument of an identity to login with, or prompts if none is supplied
-* `logout` - accepts a positional argument of an identity to log out, or presents a pick-list of existing tokens if none is supplied
-* `show` - display details about the currently active authentication credential
-* `select` - pick from a list of available authenticated connections to use by default
+* `login` - accepts a positional argument of an email address to login with, or prompts if none is supplied
+* `logout` - logs out the current authenticated session
+<!--
+* `show` - display details about active authentication credential 
+* `list` - enumerates existing authentication tokens, or returns a hint to `relay auth login` if none exist 
+ * `select` - pick from a list of available authenticated connections to use by default 
+[ multiple authentication identities are out of scope, commenting out --eric0 ] 
+ -->
 
 #### Contextual Arguments
 
