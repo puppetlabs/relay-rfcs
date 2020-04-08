@@ -110,7 +110,7 @@ short-circuit).
 
 ### Execution status
 
-![Flow diagram](0005-step-execution-outcomes/flow.png)
+![Flow diagram](flow.png)
 
 The new step statuses are:
 

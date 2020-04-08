@@ -47,8 +47,8 @@ an RFC.
 ## How to create an RFC
 
 * Create a new branch for your RFC. Something like `rfcs/your-rfc-name`.
-* Copy `0000-template.md` to `0000-your-rfc-name.md`. Do not assign a number
-  yet; it will be assigned just prior to merging.
+* Copy `content/0000-template` to `content/0000-your-rfc-name`. Do not assign a
+  number yet; it will be assigned just prior to merging.
 * Fill out your RFC with as much detail as you feel is needed. You may choose to
   exclude some sections entirely if you decide they are not relevant. However,
   reviewers may request that you complete removed sections at their discretion.

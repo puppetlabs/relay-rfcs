@@ -1,7 +1,7 @@
 # Nebula RFCs
 
-* [0005: Step execution model and outcomes](0005-step-execution-outcomes.md)
-* [0004: Relay CLI](0004-relay-cli.md)
-* [0003: Workflow conditions](0003-workflow-conditionals.md)
-* [0002: API pagination](0002-api-pagination.md)
-* [0001: Kubernetes workflow controller](0001-workflow-controller.md)
+* [0005: Step execution model and outcomes](content/0005-step-execution-outcomes/rfc.md)
+* [0004: Relay CLI](content/0004-relay-cli/rfc.md)
+* [0003: Workflow conditions](content/0003-workflow-conditionals/rfc.md)
+* [0002: API pagination](content/0002-api-pagination/rfc.md)
+* [0001: Kubernetes workflow controller](content/0001-workflow-controller/rfc.md)

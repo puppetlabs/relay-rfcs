@@ -38,10 +38,10 @@ The command should follow the [puppet-nogui design principles](https://github.co
 
 These screenshots from the pulumi cli illustrates many of these principles:
 
-![Annotated screenshot of Pulumi cli entry point](0004-relay-cli/pulumi1.png)
+![Annotated screenshot of Pulumi cli entry point](pulumi1.png)
 
 
-![Annotated screenshot of Pulumi cli with a stack subcommand](0004-relay-cli/pulumi2.png)
+![Annotated screenshot of Pulumi cli with a stack subcommand](pulumi2.png)
 
 ## Engineering-level explanation
 
