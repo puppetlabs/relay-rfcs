@@ -6,7 +6,7 @@ regard, RFCs ensure that anyone can propose changes and have them considered in
 a rigorous, structured environment.
 
 * [Accepted RFCs](INDEX.md)
-* [Template](0000-template.md)
+* [Template](content/0000-template/rfc.md)
 
 ## Why RFCs?
 
