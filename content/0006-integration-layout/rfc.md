@@ -57,6 +57,8 @@ How the GitHub directory structure might look:
 ┇ ┣ 📂 queries
 ┇ ┣ 📂 steps
 ┇ ┇ ┣ 📂 issue-create
+┇ ┇ ┇ ┣ 📂 media
+┇ ┇ ┇ ┇ ┗ 📜 ticket.svg
 ┇ ┇ ┇ ┣ 📜 Dockerfile
 ┇ ┇ ┇ ┣ 📜 README.md
 ┇ ┇ ┇ ┣ 📜 spec.schema.json
@@ -78,6 +80,8 @@ How the GitHub directory structure might look:
 ┇ ┗ 📂 webhook
 ┇   ┣ 📜 Dockerfile
 ┇   ┗ 📜 build.yaml
+┣ 📂 media
+┇ ┗ 📜 logo.svg
 ┣ 📜 README.md
 ┗ 📜 integration.yaml
 ```
@@ -146,6 +150,13 @@ homepage: https://github.com/relay-integrations/github
 # URL to this integration's source code. Optional. If the homepage is a GitHub
 # link, may be inferred automatically.
 source: git://github.com/relay-integrations/github.git
+
+# URL or path relative to this file to an icon or icons representing this
+# integration. Optional.
+icon: media/logo.svg
+#icon:
+#  tiny: media/logo-tiny.svg
+#  medium: media/logo.svg
 
 # Free-form labels to help people find this integration. Optional.
 tags:
@@ -255,8 +266,8 @@ apiVersion: integration/v1
 # The schema kind. Required. Must be one of "Query", "Step", or "Trigger"
 # corresponding to its directory location.
 kind: Step
-# kind: Query
-# kind: Trigger
+#kind: Query
+#kind: Trigger
 
 # The name of the action. Required. Must be exactly the name of the directory
 # containing the action.
@@ -273,6 +284,13 @@ summary: Create an issue
 # Optional. Markdown.
 description: |
   Creates a new issue (if issues are enabled).
+
+# URL or path relative to this file to an icon or icons representing this
+# action. Optional. Defaults to the integration icon.
+icon: media/ticket.svg
+#icon:
+#  tiny: media/ticket-tiny.svg
+#  medium: media/ticket.svg
 
 # The mechanism to use to construct this step. Required. Must be an action
 # builder. See the Builders section below.
