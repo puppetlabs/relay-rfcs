@@ -1,10 +1,10 @@
 # License
 
-Copyright 2019 Puppet, Inc.
+Copyright 2019–2020 Puppet, Inc.
 
 # Component licenses
 
-## 0000-template.md
+## `content/0000-template/rfc.md`
 
 Copyrights in the Rust project are retained by their contributors. No copyright
 assignment is required to contribute to the Rust project.
