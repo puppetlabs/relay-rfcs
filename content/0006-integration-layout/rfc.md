@@ -399,9 +399,9 @@ shortcuts where possible. Builders allow us to abstract the notion of image
 construction so that it's easy to just dump some source code (Go, Python, etc.)
 in a directory and have it automatically work with our service.
 
-Our tooling, in particular the `relay devel new` command, should be able to
-prompt the user for the builder to use and set up sensible defaults for the new
-action.
+Our tooling, in particular the `relay integration new` command, should be able
+to prompt the user for the builder to use and set up sensible defaults for the
+new action.
 
 #### `DockerOverride`
 
@@ -615,13 +615,14 @@ commands. We also deprecate Spindle in favor of Relay CLI commands.
 We add the following commands to the Relay CLI (also see [RFC
 0004](https://github.com/puppetlabs/nebula/blob/master/rfcs/content/0004-relay-cli/rfc.md)):
 
-* `relay devel init [integration-name]`: Scaffolds an integration using the our
-  prescribed directory layout.
-* `relay devel new action -t {step,query,trigger}`: Within an integration
+* `relay integration init [integration-name]`: Scaffolds an integration using
+  our prescribed directory layout.
+* `relay integration new action -t {step,query,trigger}`: Within an integration
   layout, scaffolds a new action with the requested type.
-* `relay devel generate [--write]`: Generate the Dockerfiles for each action in
-  this integration from their respective builders.
-* `relay devel build`: Build Docker images for each action in this integration.
+* `relay integration generate [--write]`: Generate the Dockerfiles for each
+  action in this integration from their respective builders.
+* `relay integration build`: Build Docker images for each action in this
+  integration.
 
   This command has a few important flags:
   * `--repository-template`: A template for constructing a Docker repository
@@ -635,11 +636,12 @@ We add the following commands to the Relay CLI (also see [RFC
   * `--engine`: The engine to use to build the images. We'd like to support both
     Docker and Kaniko at a minimum.
 
-  If the Dockerfiles present are not up-to-date relative to what `relay devel
-  generate` would write, we present a warning when running this command.
-* `relay devel publish`: An initial implementation of the command that will
-  eventually submit the integration to our library. In this phase, it simply
-  pushes what `relay devel build` produces to a Docker registry.
+  If the Dockerfiles present are not up-to-date relative to what `relay
+  integration generate` would write, we present a warning when running this
+  command.
+* `relay integration publish`: An initial implementation of the command that
+  will eventually submit the integration to our library. In this phase, it
+  simply pushes what `relay integration build` produces to a Docker registry.
 
 In this phase, we only support the `Docker` builder (probably without `input`,
 which is somewhat more complicated to implement). We simply delete each
@@ -655,7 +657,7 @@ intermediate images.
 
 We add the following command to the Relay CLI:
 
-* `relay devel new image`: Scaffold a new intermediate image.
+* `relay integration new image`: Scaffold a new intermediate image.
 
 We refactor our existing integrations to take advantage of intermediate images
 or other builders where appropriate.
@@ -671,8 +673,8 @@ implementation of [PN-175](https://tickets.puppetlabs.com/browse/PN-175).
 We amend the API and/or workflow controller to perform this dereferencing where
 required.
 
-We also update `relay devel build` and `relay devel publish` to push to the
-library API by default instead of requiring a complex repository and tag
+We also update `relay integration build` and `relay integration publish` to push
+to the library API by default instead of requiring a complex repository and tag
 template scheme.
 
 We add support for channels other than `stable`.
@@ -681,9 +683,9 @@ We add support for channels other than `stable`.
 
 We've been ignoring most of the descriptive metadata in our integrations,
 copying it by hand to the library section of the website as needed. This phase
-introduces a more sophisticated `relay devel publish` that submits top-level
-metadata, actions as Docker images, and relevant documentation as a single
-atomic unit.
+introduces a more sophisticated `relay integration publish` that submits
+top-level metadata, actions as Docker images, and relevant documentation as a
+single atomic unit.
 
 We update the library section of the website to reference the library API. Our
 goal for this phase is to ensure that when an integration is updated, changes
@@ -765,7 +767,7 @@ We will be successful if:
    it increasingly easier to produce and consume actions.
 2. We have a dynamically-generated library of actions that exposes all relevant
    metadata.
-3. Our `relay devel` CLI command supports managing an integration layout.
+3. Our `relay integration` CLI command supports managing an integration layout.
 
 ## Future possibilities
 

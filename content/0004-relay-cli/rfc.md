@@ -45,7 +45,7 @@ These screenshots from the pulumi cli illustrates many of these principles:
 
 ## Engineering-level explanation
 
-Here's a tree diagram of the information architecture for the command. Aside from the `devel` subcommand, which is primarily concerned with a local development loop, these perform operations directly on the service or between the local filesystem and the service.
+Here's a tree diagram of the information architecture for the command. Aside from the `integration` subcommand, which is primarily concerned with a local development loop, these perform operations directly on the service or between the local filesystem and the service.
 
 It's useful to have conventions that make the tool behave consistently and "intuitively" (nothing about computers is really _intuitive_ but being able to reuse things you've already learned leads to a sense of mastery). Some of the specific conventions in this tool are:
 
@@ -61,7 +61,7 @@ relay
 ├── connection - manage stored authenticated connections to external services
 │  ├── add,delete,edit,list,show
 │  └── verify
-├── devel - operations useful for content authors/editors are aggregated here
+├── integration - operations useful for integration authors/editors are aggregated here
 │  ├── init
 │  ├── new
 │  └── test
@@ -148,9 +148,9 @@ add:
 show:
 * `[positional]` - display details about this connection
 
-### devel
+### integration
 
-The `relay devel` subcommand aggregates all of the operations that are primarily used when users are authoring or testing content. will initialize the current working directory with the scaffolding necessary to build a well-formed integration. It's intended for authors who are starting to build a new integration against an external tool/service they own or care about.
+The `relay integration` subcommand aggregates all of the operations that are primarily used when users are authoring or testing content. will initialize the current working directory with the scaffolding necessary to build a well-formed integration. It's intended for authors who are starting to build a new integration against an external tool/service they own or care about.
 
 #### Usage
 
@@ -158,7 +158,7 @@ The `relay devel` subcommand aggregates all of the operations that are primarily
 * `new` - create a new workflow or step 
 * `test` - test specified targets
 
-`relay devel init` is analogous with `git init` or `pdk init` for Puppet modules. The scaffolding should include starting points for each type of content the service supports, plus metadata and documentation "prompts" to make the correct thing the easy thing for authors. A directory structure could look like:
+`relay integration init` is analogous with `git init` or `pdk init` for Puppet modules. The scaffolding should include starting points for each type of content the service supports, plus metadata and documentation "prompts" to make the correct thing the easy thing for authors. A directory structure could look like:
 
 ```
 foo-integration
@@ -326,7 +326,7 @@ Another form of success could come from using the CLI as a rapid-prototyping too
 ## Unresolved questions
 
 * Should we collect metrics from the CLI itself or are service-level metrics sufficient? We could learn from Wash and Bolt here.
-* The whole `relay devel` subcommand experience could change greatly depending on real world usage by developers. The directory structure, metadata, and exact contents of the scaffolding are under specified. Testing in particular is a big grey area: beyond simple yaml syntax validation, how much testing can we do, and what form should it take? 
+* The whole `relay integration` subcommand experience could change greatly depending on real world usage by developers. The directory structure, metadata, and exact contents of the scaffolding are under specified. Testing in particular is a big grey area: beyond simple yaml syntax validation, how much testing can we do, and what form should it take?
 
 ## Future possibilities
 
