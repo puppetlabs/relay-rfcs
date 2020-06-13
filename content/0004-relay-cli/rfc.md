@@ -162,18 +162,17 @@ The `relay integration` subcommand aggregates all of the operations that are pri
 
 ```
 foo-integration
-├── actions
-│  ├── queries
-│  │  └── queryfoo
-│  │     └── Dockerfile
-│  ├── steps
-│  │  ├── anotherstep
-│  │  │  └── Dockerfile
-│  │  └── mystep
-│  │     └── Dockerfile
-│  └── triggers
-│     └── triggerblah
-│        └── Dockerfile
+├── queries
+│  └── queryfoo
+│     └── Dockerfile
+├── steps
+│  ├── anotherstep
+│  │  └── Dockerfile
+│  └── mystep
+│     └── Dockerfile
+├── triggers
+│  └── triggerblah
+│     └── Dockerfile
 ├── README.md
 └── metadata.json
 ```
@@ -205,7 +204,7 @@ The API is going to accept these additional files as an archive (zip, tgz, whate
 
 `new`: 
 * Without any arguments, could interview the user to select the object to create and suggest defaults.
-* `action [name] --type [step|query|trigger]` - make a new step of the specified type with a starter Dockerfile
+* `image [name] --type [step|query|trigger]` - make a new image of the specified type with a starter Dockerfile
 
 `test`:
 * `[positional]` - types of tests to run (TBD); could just do syntax validation against workflow as a start
@@ -231,28 +230,24 @@ show:
 
 ### step
 
-This subcommand operates on step actions. Actions are the main atom of functionality in Relay. Actions are provided by special-purpose containers that the service launches in response to something happening. They come in three flavors:
+This subcommand operates on steps.
 
-* Step actions - Relay runs step actions, passing in parameters and secrets, as part of an automation workflow.
-* Query actions - Sometimes you'll need to break out of automated workflow to prompt for external input, like a one-time password or a human approval. Query actions enable Relay to pause and request information from the outside world before proceeding.
-* Trigger actions - External systems send events to Relay, which handles them by executing a Trigger action. The Trigger action is run to determine how to respond to the event.
-
-There's not a meaningful way to interact with query and trigger actions from the CLI because they are invoked as part of other events happening on the service. Step actions, however can be run individually as a stepping stone (sorry) towards building up more complex workflows. 
+(There's not a meaningful way to interact with queries and triggers from the CLI because they are invoked as part of other events happening on the service. Steps, however can be run individually as a stepping stone (sorry) towards building up more complex workflows.)
 
  
 #### Usage
 
-* `run` - this operates against the service, allowing for ad-hoc execution of an action. Running an action with no/minimal arguments could be a low-friction onboarding and diagnostic tool - it could run a general-purpose container on the service and dump back the input params/context, or a "hello world" type script to show users some success before they invest a lot of effort into learning.
+* `run` - this operates against the service, allowing for ad-hoc execution of a step. Running a step with no/minimal arguments could be a low-friction onboarding and diagnostic tool - it could run a general-purpose container on the service and dump back the input params/context, or a "hello world" type script to show users some success before they invest a lot of effort into learning.
 
 #### Contextual Arguments
 
 run:
-* `[positional]` - a container registry path to the action which ought to run
+* `[positional]` - a container registry path to the step which ought to run
 * `--params ['{ ... json ... } | @filename | -` - json-formatted parameter names and values to supply, avoiding prompts. `@file` should read from a file, using `-` should read from stdin
 
 ### workflow
 
-A workflow is a sequenced collection of actions, parameters, and metadata that automates some work. The `relay workflow` subcommand is responsible for managing the workflows available to the current authenticated user on the service.
+A workflow is a sequenced collection of steps, queries, triggers, parameters, and metadata that automates some work. The `relay workflow` subcommand is responsible for managing the workflows available to the current authenticated user on the service.
 
 #### Usage
 

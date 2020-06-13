@@ -41,7 +41,7 @@ included with steps in workflows. We expect there to be multiple step types in
 the future (for example, groups of steps), but they will all have a common
 `success` or `failure` outcome.
 
-### Actions
+### Removal of step types
 
 As it relates to our current implementation, we introduced the concept of step
 types to support approvals, a *non-work* process. We therefore propose a new
@@ -50,9 +50,6 @@ referential to, steps. We believe this will create a clearer user experience. A
 separate RFC will address the technical implementation of queries, but we
 highlight the change here because we eliminate the `approved` (expressed as
 `success`) and `rejected` step statuses as part of this RFC.
-
-Holistically, steps and queries belong to a category of atomic functionality we
-refer to as **actions**.
 
 In summary, today we have a YAML document with an approval step:
 
@@ -165,16 +162,16 @@ The new run statuses are:
 * `initializing` (unresolved): The run resource has been created, but the
   execution backend (Tekton, metadata API) is not running yet.
 * `in-progress` (unresolved): The run is executing.
-* `complete` (resolved): All actions associated with this run reached a resolved
-  status.
+* `complete` (resolved): All containers associated with this run reached a
+  resolved status.
 
 Additionally, we express the **outcome** of a run independently of its status:
 
-* `success`: All actions associated with this run reached a resolved status
+* `success`: All containers associated with this run reached a resolved status
   without an instruction to the run to assign any other outcome. Note that this
-  does not necessarily mean that each action succeeded.
-* `failure`: One or more actions implicitly or explicitly informed this run that
-  it cannot be considered successful.
+  does not necessarily mean that each container succeeded.
+* `failure`: One or more containers implicitly or explicitly informed this run
+  that it cannot be considered successful.
 * `system-error`: One or more system errors occurred (see above, as the same
   logic applies for steps) when executing the run.
 * `cancelled`: A user agent requested cancellation of the run.
