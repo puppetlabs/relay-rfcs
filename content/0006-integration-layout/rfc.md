@@ -41,10 +41,9 @@ An empty directory structure for a newly created integration:
 
 ```
 📦 my-integration
-┣ 📂 actions
-┇ ┣ 📂 queries
-┇ ┣ 📂 steps
-┇ ┗ 📂 triggers
+┣ 📂 queries
+┣ 📂 steps
+┣ 📂 triggers
 ┣ 📜 README.md
 ┗ 📜 integration.yaml
 ```
@@ -53,26 +52,25 @@ How the GitHub directory structure might look:
 
 ```
 📦 github
-┣ 📂 actions
-┇ ┣ 📂 queries
-┇ ┣ 📂 steps
-┇ ┇ ┣ 📂 issue-create
-┇ ┇ ┇ ┣ 📂 media
-┇ ┇ ┇ ┇ ┗ 📜 ticket.svg
-┇ ┇ ┇ ┣ 📜 Dockerfile
-┇ ┇ ┇ ┣ 📜 README.md
-┇ ┇ ┇ ┣ 📜 spec.schema.json
-┇ ┇ ┇ ┣ 📜 outputs.schema.json
-┇ ┇ ┇ ┗ 📜 step.yaml
-┇ ┇ ┣ 📜 pull-request-create.yaml
-┇ ┇ ┣ 📜 pull-request-create@2.yaml
-┇ ┇ ┗ 📜 pull-request-merge.yaml
-┇ ┗ 📂 triggers
-┇   ┣ 📜 issue-opened.yaml
-┇   ┣ 📜 pull-request-merged.yaml
-┇   ┣ 📜 pull-request-opened.yaml
-┇   ┣ 📜 pushed.yaml
-┇   ┗ 📜 release-published.yaml
+┣ 📂 queries
+┣ 📂 steps
+┇ ┣ 📂 issue-create
+┇ ┇ ┣ 📂 media
+┇ ┇ ┇ ┗ 📜 ticket.svg
+┇ ┇ ┣ 📜 Dockerfile
+┇ ┇ ┣ 📜 README.md
+┇ ┇ ┣ 📜 spec.schema.json
+┇ ┇ ┣ 📜 outputs.schema.json
+┇ ┇ ┗ 📜 step.yaml
+┇ ┣ 📜 pull-request-create.yaml
+┇ ┣ 📜 pull-request-create@2.yaml
+┇ ┗ 📜 pull-request-merge.yaml
+┣ 📂 triggers
+┇ ┣ 📜 issue-opened.yaml
+┇ ┣ 📜 pull-request-merged.yaml
+┇ ┣ 📜 pull-request-opened.yaml
+┇ ┣ 📜 pushed.yaml
+┇ ┗ 📜 release-published.yaml
 ┣ 📂 images
 ┇ ┣ 📂 pr
 ┇ ┇ ┣ 📜 Dockerfile
@@ -107,9 +105,9 @@ name: github
 channel: stable
 
 # The version of the integration. Required. This is an arbitrary text string
-# used to identify the bundle of actions for this release. Using dates or
-# incrementing integers is recommended. Each version replaces the one before it
-# on the specified release channel.
+# used to identify the bundle of container images for this release. Using dates
+# or incrementing integers is recommended. Each version replaces the one before
+# it on the specified release channel.
 #
 # As a convenience, this information may come from another text file or from a
 # Git tag (if applicable). We may add additional sources in the future.
@@ -192,56 +190,56 @@ to modify with the following sections:
 * Examples
 * Contributing
 
-### Actions
+### Container images
 
-Each kind of action (query, step, and trigger) has its own metadata format that
-share a common structure to identify the Docker image to use as a base for the
-action.
+Each kind of container image (query, step, and trigger) has its own metadata
+format that share a common structure.
 
-Each action in an integration has its own directory corresponding to the slug
-for the action. This directory contains metadata for the action as well as any
-files needed for the action.
+Each container image in an integration has its own directory corresponding to
+its slug. This directory contains metadata as well as any additional files
+needed for building and running.
 
 As a convenience to authors, we provide one normalization feature: if no extra
-files are needed for a given action, the structure
-`actions/<type-plural>/<name>[@version]/<type>.yaml` may be abbreviated to
-`actions/<type-plural>/<name>[@version].yaml`. If both the abbreviated YAML file
-and directory exist simultaneously, the directory takes priority and a warning
-shall be emitted by developer tooling.
+files are needed for a container image, the structure
+`<type-plural>/<name>[@version]/<type>.yaml` may be abbreviated to
+`<type-plural>/<name>[@version].yaml`. If both the abbreviated YAML file and
+directory exist simultaneously, the directory takes priority and a warning shall
+be emitted by developer tooling.
 
 #### README
 
-Each action may include a `README.md` file. If present, it should include an
-overview of the action, including usage examples, in markdown format.
+Each container image may include a `README.md` file. If present, it should
+include an overview of the image, including usage examples, in markdown format.
 
-Like the top-level README, we'll provide a template for each kind of action. All
-templates will include a section for examples; some actions may have additional
+Like the top-level README, we'll provide a template for each kind of image. All
+templates will include a section for examples; some images may have additional
 sections.
 
 #### Versioning
 
-An action itself only has one version identifier: a major version. The major
-version represents API compatibility only. That is, if any inputs (spec) or
-outputs of an action change, the version must be incremented. Otherwise, it can
-stay the same.
+A container image itself only has one version identifier: a major version. The
+major version represents API compatibility only. That is, if any of its inputs
+(spec) or outputs (including, for example, event data) change, the version must
+be incremented. Otherwise, it can stay the same.
 
 Versioning in integrations is somewhat nuanced because we're trying to solve two
 pragmatic problems:
 
 1. We don't want integration authors to be stuck in version hell. We want to
-   avoid having to bump the major version of an integration if one action has an
+   avoid having to bump the major version of an integration if one image has an
    incompatible change. We also want to avoid authors having to mess with
-   individual version numbers in each action.
-2. Users need to be able to quickly find the version of an action that supports
-   what they need. Once they find it, they depend on it not to arbitrarily break
-   (semantic versioning).
+   individual version numbers for each image.
+2. Users need to be able to quickly find the version of a container image that
+   supports what they need. Once they find it, they depend on it not to
+   arbitrarily break (semantic versioning).
 
 The solution is combining multiple pieces of information, some from the
-integration and some from the action. The complete version identifier for an
-action is the tuple of the integration release channel, the action major
-version, and the integration version. For example, for the GitHub integration on
-the beta channel with release version `v20200408` and the step `issue-create`
-with major version 3, the full version identifier is `(beta, 3, v20200408)`.
+integration and some from the image metadata. The complete version identifier
+for a container image is the tuple of the integration release channel, the
+image's major version, and the integration version. For example, for the GitHub
+integration on the beta channel with release version `v20200408` and the step
+`issue-create` with major version 3, the full version identifier is `(beta, 3,
+v20200408)`.
 
 In general, we expect users to stick with expressing their version requirements
 in terms of a release channel (usually defaulting to stable) and a major
@@ -249,15 +247,15 @@ version. However, if a user does want to pin versions, they do have the ability
 to identify a specific release version.
 
 We expect that some integrations will need to simultaneously maintain two major
-versions of the same action. Action directory names (or abbreviated YAML files)
-can optionally contain the major version separated from the name by an `@`
-character. If one or more versioned action directory names exist along with a
+versions of the same image slug. Image directory names (or abbreviated YAML
+files) can optionally contain the major version separated from the name by an
+`@` character. If one or more versioned image directory names exist along with a
 non-versioned directory name, the non-versioned directory's major version must
 be larger than the largest versioned directory's major version.
 
 #### Common metadata
 
-All action metadata has the following fields:
+All container image metadata has the following fields:
 
 ```yaml
 # The schema version. Required. Must be exactly the string "integration/v1".
@@ -269,30 +267,30 @@ kind: Step
 #kind: Query
 #kind: Trigger
 
-# The name of the action. Required. Must be exactly the name of the directory
-# containing the action.
+# The name of the container image. Required. Must be exactly the name of the
+# directory containing the image.
 name: issue-create
 
-# The version of the action. Required. Must be an integer. If specified in the
+# The version of the image. Required. Must be an integer. If specified in the
 # directory name, must be exactly the version in the directory name.
 version: 3
 
-# High-level phrase describing what this action does. Required.
+# High-level phrase describing what this image does. Required.
 summary: Create an issue
 
-# Single-paragraph explanation of what this action does in more detail.
+# Single-paragraph explanation of what this image does in more detail.
 # Optional. Markdown.
 description: |
   Creates a new issue (if issues are enabled).
 
 # URL or path relative to this file to an icon or icons representing this
-# action. Optional. Defaults to the integration icon.
+# image. Optional. Defaults to the integration icon.
 icon: media/ticket.svg
 #icon:
 #  tiny: media/ticket-tiny.svg
 #  medium: media/ticket.svg
 
-# The mechanism to use to construct this step. Required. Must be an action
+# The mechanism to use to construct this step. Required. Must be an image
 # builder. See the Builders section below.
 build:
   # The schema version for builders. Required. For now, must be the exact
@@ -315,7 +313,7 @@ defined yet.
 
 #### Step metadata
 
-Step metadata extends the common action metadata:
+Step metadata extends the common container image metadata:
 
 ```yaml
 schemas:
@@ -362,7 +360,7 @@ build:
 
 #### Trigger metadata
 
-Trigger metadata extends the common action metadata:
+Trigger metadata extends the common container image metadata:
 
 ```yaml
 # The implemented trigger types. Required. For now, only "webhook" is supported.
@@ -394,18 +392,18 @@ schemas:
 ### Builders
 
 We want users to know that they have the flexibility of using a Dockerfile to
-build actions when they need to, but we also want to provide convenient
-shortcuts where possible. Builders allow us to abstract the notion of image
-construction so that it's easy to just dump some source code (Go, Python, etc.)
-in a directory and have it automatically work with our service.
+build images when they need to, but we also want to provide convenient shortcuts
+where possible. Builders allow us to abstract the notion of image construction
+so that it's easy to just dump some source code (Go, Python, etc.) in a
+directory and have it automatically work with our service.
 
 Our tooling, in particular the `relay integration new` command, should be able
 to prompt the user for the builder to use and set up sensible defaults for the
-new action.
+new image.
 
 #### `DockerOverride`
 
-This builder creates an action by customizing another image.
+This builder creates an image by customizing another image.
 
 ```yaml
 # The image to inherit. Required. Either a string referencing an existing
@@ -432,7 +430,7 @@ env:
 
 #### `Docker`
 
-This builder creates an action using a Dockerfile collocated with the action
+This builder creates an image using a Dockerfile collocated with container image
 metadata.
 
 ```yaml
@@ -450,7 +448,7 @@ args:
 
 #### `Go`
 
-This builder creates an action using Go source code.
+This builder creates an image using Go source code.
 
 ```yaml
 # The path to the directory to copy as the Go module to build. Optional.
@@ -477,7 +475,7 @@ input: |
 
 #### `PythonPackage`
 
-This builder creates an action using Python setuptools, installing any
+This builder creates an image using Python setuptools, installing any
 dependencies automatically. If the source code includes `scripts` or
 `console_scripts` in its setuptools call, they will be installed to the image.
 
@@ -501,14 +499,14 @@ input: |
 
 ### Intermediate images
 
-It's often helpful to be able to derive a bunch of actions from a single source
+It's often helpful to be able to derive a bunch of images from a single source
 image. For example, you may have an integration-specific library you need to use
-with every action. Or it may be enough to just need the Python interpreter
+with every image. Or it may be enough to just need the Python interpreter
 installed in your steps.
 
 Define an intermediate image for an integration by creating a `build.yaml` in an
 `images/<image-name>` directory. This `build.yaml` has the same syntax as the
-`build` property of an action. For example, a Python intermediate image
+`build` property of an image. For example, a Python intermediate image
 `build.yaml` might look like:
 
 ```yaml
@@ -519,7 +517,7 @@ context: my/package
 
 For simple cases (e.g., `DockerOverride`), `images/<image-name>.yaml` is
 equivalent to `images/<image-name>/build.yaml` with the same semantics as
-abbreviated action YAML files.
+abbreviated image YAML files.
 
 Intermediate images are never published, but they can be referenced by path (as
 in the image reference to a file in `DockerOverride`) or using the special
@@ -544,20 +542,21 @@ reference to an integration is optional. For example, both `puppet/github` and
 
 ### Referencing integrations in workflows
 
-Currently, the only way to reference an action in a workflow is by explicitly
-specifying the Docker image to run. As we develop a library API, we intend to
-supplement (not remove!) this functionality with the ability to simply specify
-the name of an action in the context of an integration.
+Currently, the only way to reference an image in a workflow is by explicitly
+specifying a Docker image to run using a registry, repository, and tag. As we
+develop a library API, we intend to supplement (not remove!) this functionality
+with the ability to simply specify the name of an image in the context of an
+integration.
 
 As defined in a workflow file, we propose to add a new property to queries,
-steps, and triggers named `action`. It is mutually exclusive with `image`. It
-has the following format:
+steps, and triggers named `ref` that can be dereferenced to a repository and tag
+tuple. It is mutually exclusive with `image`. It has the following format:
 
 ```
-<integration-name>[^<channel>]/<action-name>@<action-major-version>[.<integration-version>]
+<integration-name>[^<channel>]/<image-name>@<image-major-version>[.<integration-version>]
 ```
 
-Note that it is unnecessary to specify what type of action to reference, as that
+Note that it is unnecessary to specify what type of image to reference, as that
 is implied by the location within the workflow file.
 
 For example, to use the latest `issue-create` step compatible with major version
@@ -566,7 +565,7 @@ For example, to use the latest `issue-create` step compatible with major version
 ```yaml
 steps:
 - name: create-my-issue
-  action: puppet/github^beta/issue-create@3
+  ref: puppet/github^beta/issue-create@3
   spec:
     connection: !Connection {type: github, name: my-github}
     # ...
@@ -592,11 +591,11 @@ implementation of this RFC.
 
 For our first phase, we [create a template
 repository](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-template-repository)
-on GitHub with stubbed examples for root-level metadata, actions, and
+on GitHub with stubbed examples for root-level metadata, image directories, and
 supplementary files (READMEs, etc.).
 
-In addition to each action containing its corresponding metadata file, they
-contain a Spindle-compatible `container.yaml` file that we use to generate
+In addition to each image directory containing its corresponding metadata file,
+they contain a Spindle-compatible `container.yaml` file that we use to generate
 Dockerfiles. We migrate our generation and build scripts from `nebula-steps` so
 we can build images using our existing tooling.
 
@@ -617,22 +616,22 @@ We add the following commands to the Relay CLI (also see [RFC
 
 * `relay integration init [integration-name]`: Scaffolds an integration using
   our prescribed directory layout.
-* `relay integration new action -t {step,query,trigger}`: Within an integration
-  layout, scaffolds a new action with the requested type.
+* `relay integration new image -t {step,query,trigger}`: Within an integration
+  layout, scaffolds a new image with the requested type.
 * `relay integration generate [--write]`: Generate the Dockerfiles for each
-  action in this integration from their respective builders.
-* `relay integration build`: Build Docker images for each action in this
-  integration.
+  image in this integration from their respective builders.
+* `relay integration build`: Build Docker images for each image metadata file in
+  this integration.
 
   This command has a few important flags:
   * `--repository-template`: A template for constructing a Docker repository
-    name from an integration and action. For example,
-    `projectnebula/{{.Integration.Name }}-{{ .Action.Kind }}-{{ .Action.Name}}`
+    name from an integration and image. For example,
+    `projectnebula/{{.Integration.Name }}-{{ .Image.Kind }}-{{ .Image.Name}}`
     would yield something like `projectnebula/github-step-issue-create`.
   * `--tag-template`: A template for constructing a Docker tag name from an
-    integration and action. May be specified multiple times to create multiple
-    tags for the same action. For example, `{{ .Action.Version }}` and `{{
-    .Action.Version }}-{{ .Integration.Version }}`.
+    integration and image. May be specified multiple times to create multiple
+    tags for the same image. For example, `{{ .Image.Version }}` and
+    `{{ .Image.Version }}-{{ .Integration.Version }}`.
   * `--engine`: The engine to use to build the images. We'd like to support both
     Docker and Kaniko at a minimum.
 
@@ -666,9 +665,10 @@ or other builders where appropriate.
 
 Thus far, we've been able to avoid making changes to the API or workflow
 execution engine to accommodate our new integration layout. To support
-referencing an action using our desired syntax, we stub a library API that
-dereferences an action reference to a Docker image. This may be a simplistic
-implementation of [PN-175](https://tickets.puppetlabs.com/browse/PN-175).
+referencing an image using our desired syntax, we stub a library API that
+dereferences an integration image reference to a Docker image. This may be a
+simplistic implementation of
+[PN-175](https://tickets.puppetlabs.com/browse/PN-175).
 
 We amend the API and/or workflow controller to perform this dereferencing where
 required.
@@ -684,8 +684,8 @@ We add support for channels other than `stable`.
 We've been ignoring most of the descriptive metadata in our integrations,
 copying it by hand to the library section of the website as needed. This phase
 introduces a more sophisticated `relay integration publish` that submits
-top-level metadata, actions as Docker images, and relevant documentation as a
-single atomic unit.
+top-level metadata, Docker images, and relevant documentation as a single atomic
+unit.
 
 We update the library section of the website to reference the library API. Our
 goal for this phase is to ensure that when an integration is updated, changes
@@ -713,16 +713,16 @@ we've elected to address a larger surface area as part of our initial design.
 
 ### Why is this design the best in the space of possible designs?
 
-The customizability of our actions is a reasonably important differentiator for
+The customizability of our images is a reasonably important differentiator for
 our product. We want to balance that with a bit of rigor that lowers the
 cognitive burden of structuring a development environment that creates Docker
 images compatible with our execution engine.
 
 We believe this layout is convenient, easy to reason about, and extensible
 enough to handle most of our needs for those forseeable future. It includes
-extension points to add new action types, and generally provides a level of
+extension points to add new image types, and generally provides a level of
 nesting that lets us incorporate as much additonal content as we wish alongside
-action definitions without being overly verbose.
+image definitions without being overly verbose.
 
 ### What other designs have been considered and what is the rationale for not choosing them?
 
@@ -747,7 +747,7 @@ We retain the current architecture of arbitrary directories containing Docker
 containers that happen to work with our service. While easy to write, they're
 quite difficult to maintain and they don't have the cohesive feel that an
 integration package does. We don't think we'll get community involvement with
-our current approach, nor will we be able to effectively promote our actions as
+our current approach, nor will we be able to effectively promote our images as
 a library.
 
 ### What specific risks are associated with this design?
@@ -764,17 +764,17 @@ occur.
 We will be successful if:
 
 1. Qualitatively, as we progress through the implementation of this RFC, we find
-   it increasingly easier to produce and consume actions.
-2. We have a dynamically-generated library of actions that exposes all relevant
+   it increasingly easier to produce and consume images.
+2. We have a dynamically-generated library of images that exposes all relevant
    metadata.
 3. Our `relay integration` CLI command supports managing an integration layout.
 
 ## Future possibilities
 
-* We have not discussed testing actions. This is an expansive topic. We leave it
+* We have not discussed testing images. This is an expansive topic. We leave it
   for a future RFC.
 * While we have defined a mechanism for providing JSON Schemas for different
-  components of actions, we haven't discussed how they will be used. We
+  components of images, we haven't discussed how they will be used. We
   anticipate rendering documentation and automatic validation of step
   specifications at a minimum. However, we leave these specifics to a future
   RFC.
