@@ -1,6 +1,9 @@
-# License
+# Content license
 
 Copyright 2019–2020 Puppet, Inc.
+
+This work is licensed under CC BY-NC-SA 4.0 <LICENSE-CC-BY-NC-SA-4.0> or
+<https://creativecommons.org/licenses/by-nc-sa/4.0>.
 
 # Component licenses
 

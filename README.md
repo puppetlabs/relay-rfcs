@@ -1,4 +1,4 @@
-# Nebula RFCs
+# Relay RFCs
 
 RFCs (requests for comments) provide a semi-formal mechanism to bring about
 change in a product. In a democratic team where all voices are held in equal
@@ -10,14 +10,14 @@ a rigorous, structured environment.
 
 ## Why RFCs?
 
-On the Nebula team, we had been using ad-hoc Google Docs to share ideas and
+On the Relay team, we had been using ad-hoc Google Docs to share ideas and
 proposals. Often, these were viewed once and then forgotten or integrated
 without an appropriate amount of consideration.
 
 Using RFCs gives our change proposals two additional useful properties:
 
 * Persistence: Git never forgets, and now neither will we.
-* Visibility: Lots of people look at the Nebula repository, and pull requests
+* Visibility: Lots of people look at the Relay repositories, and pull requests
   have higher visibility than comments on a Google Doc.
 
 ## What is an RFC?
