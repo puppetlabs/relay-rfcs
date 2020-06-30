@@ -2,8 +2,7 @@
 
 Copyright 2019–2020 Puppet, Inc.
 
-This work is licensed under CC BY-NC-SA 4.0 <LICENSE-CC-BY-NC-SA-4.0> or
-<https://creativecommons.org/licenses/by-nc-sa/4.0>.
+This work is licensed under [CC BY-NC-SA 4.0](LICENSE-CC-BY-NC-SA-4.0).
 
 # Component licenses
 
@@ -17,6 +16,5 @@ authorship information, see the version control history or
 https://thanks.rust-lang.org
 
 Except as otherwise noted (below and/or in individual files), Rust is licensed
-under the Apache License, Version 2.0 <LICENSE-APL2> or
-<http://www.apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT> or
-<http://opensource.org/licenses/MIT>, at your option.
+under the [Apache License, Version 2.0](LICENSE-APL2) or the [MIT
+license](LICENSE-MIT), at your option.
