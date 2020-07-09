@@ -77,6 +77,17 @@ an RFC.
   fit.
 * If you are not a stakeholder on an RFC, feel free to leave informal comments.
 
+## Unavailable repositories
+
+Because Relay is a SaaS, these RFCs might reference some repositories that are
+currently unavailable to the public. There are only a few of these and they are
+listed below:
+
+* `relay-api` - The API service that powers the Relay edge.
+* `relay-ui` - The web and UI code that generates the website and user-facing
+  application.
+* `relay-deploy` - The infrastructure and workflows that deploy the Relay stack.
+
 ## Credits
 
 The structure of the template file is based on the [Rust RFC
