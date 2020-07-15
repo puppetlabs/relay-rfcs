@@ -222,6 +222,11 @@ make unacceptable security compromises.
   code. It is not. It runs directly in a user-controlled environment without any
   separation from its delegate process. For example, the delegate process might
   directly read or manipulate the memory of the entrypointer.
+
+  In general, the entrypointer's logic for performing authenticated work should
+  mirror user code: it should just communicate with the metadata API. It is
+  imperative that we not include any sensitive credentials (global or otherwise)
+  in the entrypoint binary or environment.
 * Conversely, if our own code is insecure, we introduce a potential attack
   vector to users' containers.
 * We recognize that this may make compatibility with operating systems and
