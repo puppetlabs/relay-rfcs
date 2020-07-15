@@ -119,6 +119,14 @@ Once the PVC is created, the relay operator mutating webhook modifies all pods
 to include a volume that references the PVC and a mount at
 `/var/lib/puppet/relay`.
 
+#### Init container contingency
+
+If, for any reason, PVCs don't provide the functionality we want, we can fall
+back to the slower but still reasonable init container strategy successfully
+used by Tekton. In this case, we would simply use the mutating webhook to inject
+an init container with our tooling script and a shared `emptyDir` volume to
+every relevant pod.
+
 ### Versioning
 
 We expect the Relay operator to take a version tag for the tools container to
@@ -214,9 +222,15 @@ make unacceptable security compromises.
   code. It is not. It runs directly in a user-controlled environment without any
   separation from its delegate process. For example, the delegate process might
   directly read or manipulate the memory of the entrypointer.
+* Conversely, if our own code is insecure, we introduce a potential attack
+  vector to users' containers.
 * We recognize that this may make compatibility with operating systems and
   architectures other than Linux/amd64 more difficult in the future, but we have
   no near- or medium-term plans for this.
+* Although we expect our injection strategy to be broadly compatible with
+  existing Linux containers, we anticipate a small subset of containers will not
+  successfully run under our injected supervisor process. We will have to
+  monitor this and fix it on a per-occurrence basis.
 
 ## Success criteria
 
