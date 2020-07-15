@@ -90,10 +90,6 @@ template with, e.g., no storage class specified.
 
 ```go
 type ToolInjection struct {
-  // PopulatorContainer defines a tooling bootstrap container that populates a
-  // PVC with an entrypoint binary and other tools.
-  PopulatorContainer corev1.Container `json:"populatorContainer"`
-
   // VolumeClaimTemplate is an optional definition of the PVC that will be
   // populated and attached to every tenant container.
   //
@@ -120,14 +116,16 @@ populate the PVC using a tools container.
 We report the status of the tools PVC in the tenant `status` conditions.
 
 Once the PVC is created, the relay operator mutating webhook modifies all pods
-to include a volume that references the PVC and a mount at `/var/lib/relay`.
+to include a volume that references the PVC and a mount at
+`/var/lib/puppet/relay`.
 
 ### Versioning
 
 We expect the Relay operator to take a version tag for the tools container to
-deploy to tenants. When the version tag changes, the operator must cycle through
-all existing tenants and create a new Job to create a new PVC. The operator
-should not replace the old PVC as it may be in use by existing pods.
+deploy to tenants as a command-line argument or configuration value. When the
+version tag changes, the operator must cycle through all existing tenants and
+create a new Job to create a new PVC. The operator should not replace the old
+PVC as it may be in use by existing pods.
 
 ### Tenants and WorkflowRuns
 
