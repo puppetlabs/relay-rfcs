@@ -1,5 +1,6 @@
 # Nebula RFCs
 
+* [0007: Container entrypoints](content/0007-container-entrypoints/rfc.md)
 * [0006: Layout of an integration](content/0006-integration-layout/rfc.md)
 * [0005: Step execution model and outcomes](content/0005-step-execution-outcomes/rfc.md)
 * [0004: Relay CLI](content/0004-relay-cli/rfc.md)
