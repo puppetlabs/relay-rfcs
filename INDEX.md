@@ -1,4 +1,4 @@
-# Nebula RFCs
+# Relay RFCs
 
 * [0007: Container entrypoints](content/0007-container-entrypoints/rfc.md)
 * [0006: Layout of an integration](content/0006-integration-layout/rfc.md)
