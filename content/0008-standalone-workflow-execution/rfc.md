@@ -17,7 +17,10 @@ are costly, time-wise, to setup, maintain and keep up to date.
 
 Similarly, we have a core repository that contains the components to run
 workflows, but we don't have a way of easily running those workflows in a
-standalone workflow-engine.
+standalone workflow-engine. This also means that workflow and step development
+can be painful for users. Having access to a standalone cluster, that's managed
+by a simple tool makes debugging workflows and steps much easier by removing the
+run-test-debug loop from a completely opaque system.
 
 ## Summary
 
@@ -49,7 +52,7 @@ CLI](https://github.com/puppetlabs/relay) used to manage a local Kubernetes
 cluster running the core components that execute workflows.
 
 We also generalize workflow translation and validation code currently in
-relay-api into [relay-sdk](https://github.com/puppetlabs/relay-sdk) so it can be
+relay-api into [relay-core](https://github.com/puppetlabs/relay-core) so it can be
 used by the new cli commands.
 
 #### Relay CLI Changes
@@ -66,9 +69,8 @@ To handle the above, we will wrap and leverage
 Kubernetes cluster inside docker containers.
 
 Clusters are singleton. There either is or isn't a relay development cluster on
-a machine. In V2, we will explore the ability to run more than 1 cluster by
-name, but this is notoriously complicated, so we are avoiding this complexity in
-V1.
+a machine. Multi-cluster management is out of the scope of this tool, but if
+user-demand for this feature increases, we will address it in a future RFC.
 
 This works on MacOS and Linux as long as a running Docker service is present.
 
@@ -77,42 +79,32 @@ This works on MacOS and Linux as long as a running Docker service is present.
 The following are commands to be added to the Relay CLI to support standalone
 clusters:
 
-`relay cluster start` - Start the cluster if it exists. Create and start the cluster
-if it does not exist.
-
-`relay cluster stop` - Stop all nodes in the cluster, sending proper termination
-signals to the Docker containers.
-
-`relay cluster delete` - Stop and delete the cluster and any metadata.
-
-`relay cluster kubectl` - Execute kubectl commands against the cluster.
-
-`relay cluster images import` - Imports an image from a remote or the local host into
-the cluster.
-
-`relay cluter images update` - Updates all images imported into the cluster.
-
-`relay config use-context (local|relay.sh)` - Updates the destination for relay
-commands.
-
-`relay config current-context` - Display the current context.
+* `relay dev cluster (start|stop|delete)` - Manage the cluster's run state.
+* `relay dev kubectl` - Execute kubectl commands against the cluster.
+* `relay dev get kubeconfig` - Prints cluster resources and configuration. In
+  this example it would print the cluster kubeconfig file as YAML.
+* `relay dev image (import|delete)` - Manage container images stored inside the cluster.
+* `relay config (use-context|current-context)` - Manage relay configuration.
+  Currently only used to manage the contexts around production and the development
+  cluster.
 
 #### Creating/Starting a cluster
 
 Starting and creating, for all intents and purposes, are the same thing. With
-`relay` you invoke the `cluster start` command to ensure a cluster is up and running,
+`relay dev` you invoke the `cluster start` command to ensure a cluster is up and running,
 whether it exists or not.
 
 #### Stopping a cluster
 
-To stop a cluster, you invoke the `cluster stop` command and all the supporting
-containers will be shutdown.
+To stop a cluster, you use `relay dev` and invoke the `cluster stop` command and
+all the supporting containers will be shutdown.
 
 #### Destroying a cluster
 
-To destroy a cluster, you invoke the `cluster delete` command, which will stop
-and destroy running containers and delete any saved metadata and data
-files/directories. This can be used to start a new cluster from scratch.
+To destroy a cluster, you use `relay dev` and invoke the `cluster delete`
+command, which will stop and destroy running containers and delete any saved
+metadata and data files/directories. This can be used to start a new cluster
+from scratch.
 
 #### Using `kubectl`
 
@@ -126,20 +118,34 @@ it.
 
 To ensure there's no confusion as to which cluster someone is accessing to
 perform maintenance, `kubectl` commands against the standalone cluster are
-invoked using `relay cluster kubectl`, which knows how to configure kubectl with
+invoked using `relay dev kubectl`, which knows how to configure kubectl with
 the proper kubeconfig file.
 
 Obviously someone can choose to populate their global kubeconfig with the
 cluster credentials and change context if they want, but any mistakes caused
-doing so is on them.
+doing so is on them. The tool provides a new command `relay dev get kubeconfig`
+that will print the file.
 
 ### Context switching
 
 Similar to kubectl, we add the ability to switch contexts to the Relay CLI. This
-allows us to setup a `local` context that will allow the relay command to run
+allows us to setup a `dev` context that will allow the relay command to run
 workflows against the local cluster. We add a default context called `relay.sh`
 that points to the production API. Any context that indicates a local
 standalone cluster will not require a login.
+
+To achieve this in a clean way that better blends the relay command between the
+SaaS and a local dev cluster, we add a `config` subcommand that has two further
+subcommands `use-context` and `list-context`.
+
+If you create a dev cluster, it will install a `dev` context. You can switch to
+it using `relay config use-context dev`. If you want to switch back to
+production, you can use `relay config use-context relay.sh`.
+
+To avoid complexity, the initial version of the `config` command will not allow
+any other additional contexts to be added. Although it will be possible to add
+another context by modifying the configuration file by hand. This allows a user
+to add a non-production environment, such as staging, for debugging purposes.
 
 #### Bootstrapping
 
@@ -152,14 +158,14 @@ standalone cluster will not require a login.
     - knative
 * Critical 3rd party resources are deployed to the cluster using Helm
     - Ambassador
-    - Vault
 * Relay resources are deployed to the cluster using `kubectl apply`
     - relay-core CRDs
 * Helm chart configuration values are generated and populated into a
   `values.yaml` and saved to disk inside the `config.json` configuration file
 * Relay services are deployed to the cluster using Helm. See how container
   image management works below
-    - relay-core
+    - relay-operator
+    - metadata-api
 
 This will provide a cluster capable of running workflows that are issued to the
 cluster as a `Workflow` resource using kubectl. But `relay` knows how to create
@@ -168,10 +174,9 @@ API uses.
 
 The last part of the bootstrap phase is running workflows.
 
-* `relay` runs all workflows provided by the user inside a known workflows
-  directory.
-    - We check if a known workflow directory exists
-    - If the directory exists, all YAML files are ran against the cluster
+* `relay` creates a known workflows directory and installs workflows to install
+  more core components, such as Vault.
+* `relay` runs all workflows inside the known workflows directory.
 
 The workflow directory hook is handy so we can further bootstrap a development
 environment for the SaaS or make sure any resources we want will automatically
@@ -191,9 +196,16 @@ exists for that image.  These local images are then imported into the cluster by
 
 When a development build script for a Relay service is ran, the resulting
 docker image is tagged using `local` and if the `relay` utility exists in `$PATH`,
-a call to `relay cluster images import` is made to instruct `relay` to import the new
+a call to `relay dev image import` is made to instruct `relay` to import the new
 image. Unrelated to image management, the build script can then trigger a
 workflow run for the Relay service in question.
+
+The image import command supports the `-u` flag to update the image. This action
+will check if the host has a more up to date version of the image. This allows
+an external script to "push" newly built images to the cluster and then trigger
+a workflow run that will apply it.
+
+To delete an image from the cluster, the `image delete` command exists.
 
 #### Persisted configuration
 
@@ -279,8 +291,11 @@ how to run Relay on a developer's machine.
 
 ## Success criteria
 
-Developers can easily, without writing complex configuration, start a
-development cluster and run whatever version of a relay service they want.
+Users, workflow authors and developers can develop workflows without connecting
+to the remote Relay production service.
+
+Relay Developers can easily, without writing complex configuration, start a
+development cluster and run whatever version of a Relay service they want.
 
 ## Future possibilities
 
