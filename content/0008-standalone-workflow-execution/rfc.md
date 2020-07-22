@@ -79,12 +79,12 @@ This works on MacOS and Linux as long as a running Docker service is present.
 The following are commands to be added to the Relay CLI to support standalone
 clusters:
 
-* `relay dev cluster (start|stop|delete)` - Manage the cluster's run state.
+* `relay dev cluster <start|stop|delete>` - Manage the cluster's run state.
 * `relay dev kubectl` - Execute kubectl commands against the cluster.
-* `relay dev get kubeconfig` - Prints cluster resources and configuration. In
+* `relay dev kubeconfig download` - Prints cluster resources and configuration. In
   this example it would print the cluster kubeconfig file as YAML.
-* `relay dev image (import|delete)` - Manage container images stored inside the cluster.
-* `relay config (use-context|current-context)` - Manage relay configuration.
+* `relay dev image <import|delete>` - Manage container images stored inside the cluster.
+* `relay config <set|get>` - Manage relay configuration.
   Currently only used to manage the contexts around production and the development
   cluster.
 
@@ -136,11 +136,11 @@ standalone cluster will not require a login.
 
 To achieve this in a clean way that better blends the relay command between the
 SaaS and a local dev cluster, we add a `config` subcommand that has two further
-subcommands `use-context` and `list-context`.
+subcommands `set` and `get`.
 
 If you create a dev cluster, it will install a `dev` context. You can switch to
-it using `relay config use-context dev`. If you want to switch back to
-production, you can use `relay config use-context relay.sh`.
+it using `relay config set context dev`. If you want to switch back to
+production, you can use `relay config set context relay.sh`.
 
 To avoid complexity, the initial version of the `config` command will not allow
 any other additional contexts to be added. Although it will be possible to add
@@ -150,6 +150,9 @@ to add a non-production environment, such as staging, for debugging purposes.
 #### Bootstrapping
 
 * `relay` creates a data directory in a known location
+    - This utilizes the current XDG-compatible directories already supported in
+      the CLI configuration by pulling workflows from
+      `${HOME}/.config/relay/workflows` for instance.
 * `relay` creates a json configuration file in the data directory
 * k3d creates a 3 node Kubernetes cluster and `relay` ensures it's running and
   healthy
@@ -168,7 +171,7 @@ to add a non-production environment, such as staging, for debugging purposes.
     - metadata-api
 
 This will provide a cluster capable of running workflows that are issued to the
-cluster as a `Workflow` resource using kubectl. But `relay` knows how to create
+cluster as a `WorkflowRun` resource using kubectl. But `relay` knows how to create
 that using workflow YAML by using the same packages for workflow translation the
 API uses.
 
@@ -239,10 +242,19 @@ utilize packages from K3d, Kubernetes and other tools in the space that do a lot
 of the heavy lifting already.
 
 This version will require the developer to install a couple hard dependencies in
-order for `relay cluster` to function:
+order for `relay dev cluster` to function:
 
 * kubectl
 * docker
+
+### SaaS Development Environment
+
+Once we get `relay-operator` working and running workflows, we create a
+development-environment workflow that will install remaining SaaS infra. These
+steps will include helm installs for Postgres, Redis, relay-api, and relay-ui.
+
+The UI and API services will be exposed on host ports through the k3s ingress
+controller.
 
 ## Drawbacks
 
