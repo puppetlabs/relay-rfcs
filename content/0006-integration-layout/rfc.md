@@ -149,12 +149,9 @@ homepage: https://github.com/relay-integrations/github
 # link, may be inferred automatically.
 source: git://github.com/relay-integrations/github.git
 
-# URL or path relative to this file to an icon or icons representing this
-# integration. Optional.
+# URL or path relative to this file to an icon representing this integration.
+# Optional. If not specified, defaults to media/logo.svg if that file exists.
 icon: media/logo.svg
-#icon:
-#  tiny: media/logo-tiny.svg
-#  medium: media/logo.svg
 
 # Free-form labels to help people find this integration. Optional.
 tags:
@@ -283,12 +280,37 @@ summary: Create an issue
 description: |
   Creates a new issue (if issues are enabled).
 
-# URL or path relative to this file to an icon or icons representing this
+# URL or path relative to this file to an icon representing this container
 # image. Optional. Defaults to the integration icon.
 icon: media/ticket.svg
-#icon:
-#  tiny: media/ticket-tiny.svg
-#  medium: media/ticket.svg
+
+# A list of usage examples for this container image. Optional.
+examples:
+-
+  # A descriptive name for this example. Required.
+  summary: Create an issue by accepting user input for the issue title
+
+  # The YAML content of the example. Required.
+  content:
+    # The schema version for the example. Required. Must be the exact string
+    # "v1".
+    apiVersion: v1
+
+    # The schema kind for the example. Required. Must be one of "Workflow" for
+    # an example containing a complete or partial workflow, "Step" for an
+    # example containing only step configuration, or "Trigger" for an example
+    # containing only trigger configuration.
+    kind: Step
+
+    # If an example image field references the repository specified in the
+    # publishing information, it is not necessary to specify an image tag. It
+    # will be automatically generated as needed.
+    image: relaysh/github-step-issue-create
+
+    # Other fields are dependent on the schema kind.
+    name: create-issue-on-github
+    spec:
+      title: !Parameter issueTitle
 
 # The mechanism to use to construct this step. Required. Must be an image
 # builder. See the Builders section below.
@@ -304,6 +326,18 @@ build:
   # Additional Docker build arguments.
   args:
     MYARG: hello
+
+# Publishing information for this step. Optional.
+publish:
+  # The Docker repository to publish this image to. Optional. If not specified,
+  # this image cannot be pushed to external artifact storage. Tags will be
+  # automatically generated and must not be specified here.
+  repository: relaysh/github-step-issue-create
+
+# Free-form labels to help people find this container image. Optional.
+tags:
+- git
+- source control
 ```
 
 #### Query metadata
@@ -623,15 +657,7 @@ We add the following commands to the Relay CLI (also see [RFC
 * `relay integration build`: Build Docker images for each image metadata file in
   this integration.
 
-  This command has a few important flags:
-  * `--repository-template`: A template for constructing a Docker repository
-    name from an integration and image. For example,
-    `projectnebula/{{.Integration.Name }}-{{ .Image.Kind }}-{{ .Image.Name}}`
-    would yield something like `projectnebula/github-step-issue-create`.
-  * `--tag-template`: A template for constructing a Docker tag name from an
-    integration and image. May be specified multiple times to create multiple
-    tags for the same image. For example, `{{ .Image.Version }}` and
-    `{{ .Image.Version }}-{{ .Integration.Version }}`.
+  This command supports the following flags:
   * `--engine`: The engine to use to build the images. We'd like to support both
     Docker and Kaniko at a minimum.
 
