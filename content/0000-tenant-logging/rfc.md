@@ -34,13 +34,27 @@ triggers.
 
 ## Product-level explanation
 
-[Explain this change in a way that our product team can understand it and pitch
-it to customers for feedback. Make heavy use of examples and ensure you
-introduce any new concepts at a high level.]
+This RFC defines a consistent internal API for handling customer-driven log
+messages. In the near-term, this gives webhook trigger logs parity with step
+logs in our UIs. It is also the first step toward the following features:
+
+1. Structured logging: We anticipate extending the internal API to support
+   JSON-formatted metadata, which means that we can enhance log data with
+   additional information like severity or resource identifiers.
+1. Custom logging: Each container will have a unique set of log streams
+   associated with it, initially corresponding to standard output and error (as
+   in POSIX environments). We anticipate adding support for image authors to
+   create and write to their own streams and to be able to work with them in the
+   UI.
+1. Additional container logging: Because this system does not rely on the
+   Kubernetes pod-oriented logging and annotations on Tekton objects, we can
+   more easily enable new customer-facing features that don't use Tekton (like
+   queries, potentially) with the same quality as our Tekton-driven workflow
+   offering.
 
 ## Engineering-level explanation
 
-This RFC proposes a lightweight HTTP API built on top of Google Cloud Pub/Sub,
+This RFC proposes a lightweight gRPC API built on top of Google Cloud Pub/Sub,
 Google Cloud Dataflow, and Google BigQuery. This API serves as the authoritative
 information service for persistent log data, a concept made popular by Apache
 Kafka. A persistent log has the following properties (cf. a queue):
@@ -88,227 +102,209 @@ this design, although we do not currently have plans to implement them:
 
 ### API
 
-The metadata API and edge API access the persistent log service (PLS) using HTTP
-or gRPC APIs.
-
-#### HTTP Resources
-
-* `POST /credentials`
-
-  Create a new token.
-
-  If this request is made using an authorized token, a child token is created.
-  The child token's expiration may not exceed the expiration of the parent, and
-  the child token's contexts must be a subset of the parent's. When the parent
-  token is deleted, so are any children.
-
-  If this request is not made using an authorized token, a root token is created
-  with an empty persistent log space. This is the only resource that does not
-  require an authentication token.
-
-  The service may limit the possible expiration time. The generated token's
-  expiration time is guaranteed to be no later than the requested time, but it
-  might be earlier, depending on, for example, the service's key rotation
-  schedule.
-
-  Request:
-
-  ```json
-  {
-    "contexts": [
-      "workflows/9a000f7b-3511-4832-83e0-40914bb828b7/triggers/a7387f99-5b0c-4f42-ac7e-47612b5b96c9"
-    ],
-    "expires_at": "2021-08-05T22:40:54Z"
-  }
-  ```
-
-  Response (201):
-
-  ```json
-  {
-    "credential": {
-      "id": "baf99b076b7c8a1b83b356fba9ac37976ecb808244dc0ca879c4c41e62bc4f37",
-      "contexts": [
-        "workflows/9a000f7b-3511-4832-83e0-40914bb828b7/triggers/a7387f99-5b0c-4f42-ac7e-47612b5b96c9"
-      ],
-      "expires_at": "2021-08-05T22:40:54Z",
-      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
-    }
-  }
-  ```
-
-  The response includes a `Location` header of `/credentials/{credentialId}`.
-
-* `POST /credentials/{credentialId}/refresh`
-
-  Reissue a token with a new expiration. The given credential identifier must be
-  that of the authorized token or one of its children.
-
-  Request:
-
-  ```json
-  {
-    "expires_at": "2022-08-05T22:40:54Z"
-  }
-  ```
-
-  Response (200):
-
-  ```json
-  {
-    "credential": {
-      "id": "baf99b076b7c8a1b83b356fba9ac37976ecb808244dc0ca879c4c41e62bc4f37",
-      "contexts": [
-        "workflows/9a000f7b-3511-4832-83e0-40914bb828b7/triggers/a7387f99-5b0c-4f42-ac7e-47612b5b96c9"
-      ],
-      "expires_at": "2022-08-05T22:40:54Z",
-      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
-    }
-  }
-  ```
-
-* `DELETE /credentials/{credentialId}`
-
-  Revoke a token. The given credential identifier must be that of the authorized
-  token or one of its children. Any children of the revoked credential are also
-  immediately revoked.
-
-  Response (200):
-
-  ```json
-  {
-    "credential": {
-      "id": "baf99b076b7c8a1b83b356fba9ac37976ecb808244dc0ca879c4c41e62bc4f37"
-    }
-  }
-  ```
-
-* `POST /logs`
-
-  Create a new log stream with a given context and name. If the authentication
-  token for this request only has access to one context, it is optional to
-  provide it as it will be inferred from the token.
-
-  Request:
-
-  ```json
-  {
-    "context": "workflows/9a000f7b-3511-4832-83e0-40914bb828b7/triggers/a7387f99-5b0c-4f42-ac7e-47612b5b96c9",
-    "name": "stdout"
-  }
-
-  Response (201):
-
-  ```json
-  {
-    "log": {
-      "id": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-      "context": "workflows/9a000f7b-3511-4832-83e0-40914bb828b7/triggers/a7387f99-5b0c-4f42-ac7e-47612b5b96c9",
-      "name": "stdout"
-    }
-  }
-  ```
-
-  The response includes a `Location` header of `/logs/{logId}`. If a log with
-  the given context and name combination already exists, the service returns
-  409.
-
-* `GET /logs`
-
-  Retrieve the list of available logs.
-
-  Query parameters:
-
-  * `context={context}`: Restrict the list to logs in the given context.
-
-  Response (200):
-
-  ```json
-  {
-    "logs": [
-      {
-        "id": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-        "context": "workflows/9a000f7b-3511-4832-83e0-40914bb828b7/triggers/a7387f99-5b0c-4f42-ac7e-47612b5b96c9",
-        "name": "stdout"
-      }
-    ]
-  }
-
-* `POST /logs/{logId}/messages`
-
-  Append a message to the log stream. Initially, this endpoint only accepts a
-  media type of `application/octet-stream` and expects data to be sent in binary
-  format. Each request represents a log message, and consumers of this API are
-  expected to reasonably buffer requests (for example, to newlines).
-
-  The service responds with 202 generally or 429 if needed, and will provide a
-  [`Retry-After`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After)
-  header in this case. If the payload is larger than 2MB, the service responds
-  with 413.
-
-* `GET /logs/{logId}/messages`
-
-  Retrieve the stored log data for the given stream. Messages are returned in
-  order.
-
-  Query parameters:
-
-  * `after={messageId}`: Only return messages sequentially after the given
-    message ID.
-
-  Response (200):
-
-  ```json
-  {
-    "messages": [
-      {
-        "payload": "Hello, world\n"
-      },
-      {
-        "payload": "Goodbye, container\n"
-      }
-    ]
-  }
-  ```
-
-* `DELETE /logs/{logId}`
-
-  Delete the log and all data associated with it.
-
-  Response (200):
-
-  ```json
-  {
-    "log": {
-      "id": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-      "name": "stdout"
-    }
-  }
-  ```
-
-#### RPCs
-
-We define the following initial RPC protocol:
+The metadata API and edge API access the persistent log service (PLS) using gRPC
+APIs. We define the following initial RPC protocol:
 
 ```protobuf
 syntax = "proto3";
+package plspb;
 
-service PersistentLog {
-  rpc GetLogMessages(Log) returns (stream Message) {}
+import "google/protobuf/timestamp.proto";
+
+service Credential {
+  // Issue creates a new token.
+  //
+  // If this request is authorized, a child token is created. The child token's
+  // expiration may not exceed the expiration of the parent, and the child
+  // token's contexts must be a subset of the parent's. When the parent token
+  // is deleted, so are any children.
+  rpc Issue(CredentialIssueRequest) returns (CredentialIssueResponse);
+
+  // Refresh reissues a token with a new expiration. The returned credential
+  // may or may not reuse the same identifier as the request.
+  rpc Refresh(CredentialRefreshRequest) returns (CredentialRefreshResponse);
+
+  // Revoke deletes a token and prevents it from being used again. Any children
+  // of the token are also revoked.
+  rpc Revoke(CredentialRevokeRequest) returns (CredentialRevokeResponse);
 }
 
-message Log {
-  string id = 1;
+service Log {
+  // Create sets up a new log stream with a given context and name.
+  rpc Create(LogCreateRequest) returns (LogCreateResponse);
+
+  // Delete removes access to an existing log stream. The log stream will no
+  // longer be accessible to any client, although physical removal of data may
+  // be delayed.
+  rpc Delete(LogDeleteRequest) returns (LogDeleteResponse);
+
+  // List enumerates the log stream the authenticated credential has access to.
+  rpc List(LogListRequest) returns (stream LogListResponse);
+
+  // MessageAppend adds a new message to the log stream. If the payload is
+  // larger than 2MB, this RPC will return INVALID_ARGUMENT. If the service
+  // needs to rate-limit this request, this RPC will return RESOURCE_EXHAUSTED
+  // and additional information will be available in the QuotaFailure and
+  // RetryInfo messages.
+  rpc MessageAppend(LogMessageAppendRequest) returns (LogMessageAppendResponse);
+
+  // MessageList retrieves part or all of the messages in a log stream.
+  // Messages are returned in the order received by the service.
+  rpc MessageList(LogMessageListRequest) returns (stream LogMessageListResponse);
 }
 
-message Message {
-  bytes payload = 1;
+message CredentialIssueRequest {
+  // contexts is the list of allowed log storage contexts for this credential.
+  repeated string contexts = 1;
+
+  // expires_at indicates when this credential should expire.
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message CredentialIssueResponse {
+  // credential_id is the unique public identifier for this credential.
+  string credential_id = 1;
+
+  // contexts is the list of contexts actually granted to this token. It will
+  // be a subset of the requested contexts.
+  repeated string contexts = 2;
+
+  // expires_at indicates when this credential actually expires. It will be on
+  // or before the requested expiration.
+  google.protobuf.Timestamp expires_at = 3;
+
+  // token is the opaque authentication token for this credential to be passed
+  // to other RPC calls.
+  string token = 4;
+}
+
+message CredentialRefreshRequest {
+  // credential_id is the public identifier for the credential to refresh. If
+  // not provided, the credential authenticating this request will be refreshed.
+  // The credential must be that of the authenticated token or one of its
+  // children.
+  string credential_id = 1;
+
+  // expires_at is the desired new expiration for the given credential.
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message CredentialRefreshResponse {
+  // credential_id is the unique public identifier for the refreshed credential.
+  string credential_id = 1;
+
+  // expires_at is the new expiry for the credential. It will be on or before
+  // the requested expiration.
+  google.protobuf.Timestamp expires_at = 2;
+
+  // token is the new opaque authentication token for this credential. Any
+  // previously issued token for this credential are invalidated.
+  string token = 3;
+}
+
+message CredentialRevokeRequest {
+  // credential_id is the public identifier for the credential to revoke. If
+  // not provided, the credential authenticating this request will be revoked.
+  // The credential must be that of the authenticated token or one of its
+  // children.
+  string credential_id = 1;
+}
+
+message CredentialRevokeResponse {
+  // credential_id is the unique public identifier of the revoked credential.
+  string credential_id = 1;
+}
+
+message LogCreateRequest {
+  // context for this log. It must be one of the contexts allowed for the
+  // authenticated credential. If the credential only has access to one
+  // context, this field is optional.
+  string context = 1;
+
+  // name is a human-readable identifier for the log stream in the provided
+  // context like "stdout" or "info".
+  string name = 2;
+}
+
+message LogCreateResponse {
+  // log_id is the unique identifier for the newly created log stream.
+  string log_id = 1;
+}
+
+message LogDeleteRequest {
+  // log_id is the unique identifier for the log stream to delete.
+  string log_id = 1;
+}
+
+message LogDeleteResponse {}
+
+message LogListRequest {
+  // contexts is an optional list of contexts to limit the response to. If not
+  // specified, the response includes all contexts the authenticating
+  // credential has access to.
+  repeated string contexts = 1;
+}
+
+message LogListResponse {
+  // log_id is the unique identifier for the log stream.
+  string log_id = 1;
+
+  // context for this log stream.
+  string context = 2;
+
+  // name is the human-readable identifier for this log stream.
+  string name = 3;
+}
+
+message LogMessageAppendRequest {
+  // log_id is the identifier for the log stream to append to.
+  string log_id = 1;
+
+  // media_type is the IANA media type for the payload. Initially, the only
+  // supported media type is "application/octet-stream".
+  string media_type = 2;
+
+  // payload is the actual log data to append to the stream.
+  bytes payload = 3;
+}
+
+message LogMessageAppendResponse {
+  // log_id is the identifier for the log stream appended to.
+  string log_id = 1;
+
+  // log_message_id is an opaque identifier for the message, unique to this log
+  // stream.
+  string log_message_id = 2;
+}
+
+message LogMessageListRequest {
+  // log_id is the identifier for the log stream to retrieve messages from.
+  string log_id = 1;
+
+  // follow indicates whether this request should stay open while new messages
+  // are added to the stream. This method is opportunistic and the server may
+  // cancel streaming at any time. The client may retry by issuing another list
+  // request.
+  bool follow = 2;
+
+  // start_at is the offset to begin reading messages, inclusive.
+  google.protobuf.Timestamp start_at = 3;
+
+  // end_at is the offset to stop reading messages, exclusive.
+  google.protobuf.Timestamp end_at = 4;
+}
+
+message LogMessageListResponse {
+  // log_message_id is the stream-unique identifier for this message.
+  string log_message_id = 1;
+
+  // media_type is the IANA media type for the payload.
+  string media_type = 2;
+
+  // payload is the actual log data.
+  bytes payload = 3;
 }
 ```
-
-This streaming counterpart to the HTTP GET `/streams/{streamId}/messages`
-resource allows a client to efficiently wait for new messages to be added to a
-stream.
 
 RPC requests are authenticated by embedding the JWT in the metadata of the RPC
 request. You can use interceptors in the Go client and server to handle this in
@@ -335,7 +331,7 @@ use the following layout:
 * `/pls/data/logs/{logId}`: Information about a log, including context, name,
   and the per-log encryption key.
 * `/pls/data/contexts/{context}/logs/{logId}`: A symbolic-link style secret
-  pointing to `/pls/data/logs/{logId} to enable searching by context.
+  pointing to `/pls/data/logs/{logId}` to enable searching by context.
 
 #### Messages
 
@@ -511,38 +507,79 @@ check for the creation of new streams periodically.
 
 ## Drawbacks
 
-[Why should we _not_ include this change in the product?]
+There are a lot of moving parts in this subsystem and a failure in any one of
+them could cause a significant delay in delivering logs to end users. Luckily, I
+think we do not risk data loss once the initial acknowledgment from the PLS hits
+the metadata API unless Google experiences a very significant outage (enough to
+affect our other infrastructure in a way that will make this problem
+irrelevant).
+
+Retrieving logs from BigQuery is slower than doing the same from GCS by about
+2-3 seconds for most requests. We expect users will tolerate this since log data
+is normally only used for debugging anyway. If it becomes problematic, we may
+need to investigate a caching layer of some sort.
 
 ## Rationale and alternatives
 
 ### Why is this design the best in the space of possible designs?
 
-[...]
+We evaluated numerous logging systems, including fully hosted offerings and
+open-source infrastructure. Ultimately, we found tradeoffs in each. Many of the
+applications we could run within our cluster were either immature or require a
+lot of hands-on management and specialized knowledge. SaaS logging services are
+largely not designed for API access or a multi-tenant environment; some have a
+long delay before messages are available for consumption.
+
+Ultimately, putting a microservice interface like the PLS in front of a
+collection of fully managed backend PaaS offerings gives us a reasonable level
+of abstraction and the ability to swap out parts of the logging subsystem
+without having to change the way our other systems interact with logging.
 
 ### What other designs have been considered and what is the rationale for not choosing them?
 
-[...]
+* Sumo Logic and Loggly: Expensive, not oriented toward multi-tenant
+  architectures, poor API offerings, and delayed streaming.
+* Google Cloud Logging: Delayed streaming, sometimes on the order of minutes!
+* NATS streaming: Management complexity and difficulty of building a persistent
+  log as opposed to a simple message queue.
+* Liftbridge: Too new to the market to have confidence in data consistency.
+* Apache Kafka: Management complexity, archaic APIs, and difficulty of managing
+  storage architecture.
+* Apache Pulsar: Management complexity and difficulty of managing storage
+  architecture (ZooKeeper/BookKeeper).
+
+For each of these, we additionally struggled to figure out how to safely encrypt
+user log data.
 
 ### What is the impact of not doing this?
 
-[...]
+We do not provide users with sufficient logging information when they try to use
+webhook triggers. Therefore, users do not use webhook triggers, which
+significantly neuters a core value proposition of our product.
 
 ### What specific risks are associated with this design?
 
-[...]
+* BigQuery itself is not _really_ designed for this sort of workload. It's
+  relatively expensive; it keeps a log of every query issued, which isn't great
+  when we're passing encryption keys directly in the queries; and it's slow when
+  compared to our current GCS-backed implementation.
+* We don't have a lot of experience with Cloud Dataflow. We've done some initial
+  testing of BigQuery and understand how Cloud Pub/Sub works, but we're
+  basically going off of Google's examples to verify that Cloud Dataflow does
+  what we want.
+* Ordering messages in a streaming context remains complex. Other than using an
+  off-the-shelf persistent log platform like Pulsar, there doesn't seem to be a
+  good way to make this simpler.
 
 ## Success criteria
 
-[What will we observe when this change is completely implemented? What metrics
-can we use to measure success? Can we integrate any learnings into future
-processes?]
-
-## Unresolved questions
-
-* [Insert a list of unresolved questions and your strategy for addressing them
-  before the change is complete. Include potential impact to the scope of work.]
+When this is complete, the Relay API will start to provide webhook trigger logs
+under the relevant API endpoint. Also, we will not see any change to the
+delivery of step logs, both current and historical.
 
 ## Future possibilities
 
-[Does this change unlock other desired functionality? Will it be highly
-extensible, very constrained, or somewhere in between?]
+The PLS is a relatively unique software offering unto itself. It may be valuable
+to other organizations that need lightweight multi-tenant logging
+infrastructure, and we should consider whether it makes sense to manage and
+distribute as a separate standalone project.
