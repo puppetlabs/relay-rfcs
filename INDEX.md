@@ -1,5 +1,7 @@
 # Relay RFCs
 
+* [0010: Tenant logging](content/0010-tenant-logging/rfc.md)
+* [0009: Workflow graph GUI, second version](content/0009-workflow-graph/rfc.md)
 * [0008: Standalone workflow execution](content/0008-standalone-workflow-execution/rfc.md)
 * [0007: Container entrypoints](content/0007-container-entrypoints/rfc.md)
 * [0006: Layout of an integration](content/0006-integration-layout/rfc.md)
