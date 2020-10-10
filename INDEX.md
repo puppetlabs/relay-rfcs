@@ -1,5 +1,6 @@
 # Relay RFCs
 
+* [0011: Initial Puppet integration](content/0011-puppet-integration/rfc.md)
 * [0010: Tenant logging](content/0010-tenant-logging/rfc.md)
 * [0009: Workflow graph GUI, second version](content/0009-workflow-graph/rfc.md)
 * [0008: Standalone workflow execution](content/0008-standalone-workflow-execution/rfc.md)
