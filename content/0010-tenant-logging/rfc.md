@@ -107,6 +107,9 @@ APIs. We define the following initial RPC protocol:
 
 ```protobuf
 syntax = "proto3";
+
+option go_package = "github.com/puppetlabs/relay-pls/pkg/plspb";
+
 package plspb;
 
 import "google/protobuf/timestamp.proto";
@@ -266,6 +269,9 @@ message LogMessageAppendRequest {
 
   // payload is the actual log data to append to the stream.
   bytes payload = 3;
+
+  // timestamp is the time the message was originally received
+  google.protobuf.Timestamp timestamp = 4;
 }
 
 message LogMessageAppendResponse {
@@ -303,6 +309,9 @@ message LogMessageListResponse {
 
   // payload is the actual log data.
   bytes payload = 3;
+
+  // timestamp is the time the message was originally received
+  google.protobuf.Timestamp timestamp = 4;
 }
 ```
 
@@ -341,7 +350,7 @@ messages is:
 ```sql
 CREATE TABLE `prod-1-logs.messages` (
   log_id STRING NOT NULL,
-  seq INT64 NOT NULL,
+  log_message_id STRING NOT NULL,
   timestamp TIMESTAMP NOT NULL,
   encrypted_payload BYTES
 )
@@ -376,7 +385,7 @@ WITH keys AS (
 )
 SELECT
   msgs.log_id,
-  msgs.seq,
+  msgs.log_message_id,
   msgs.timestamp,
   aead.decrypt_bytes(keys.keyset, msgs.encrypted_payload, msgs.log_id) AS payload
 FROM `prod-1-logs.messages` msgs
@@ -415,9 +424,9 @@ In a streaming call, the PLS performs the following operations in order:
 1. Issues a query to BigQuery to select all messages
 1. Immediately returns the initial BigQuery result set to the client
 1. Skips any buffered messages from the subscription that are duplicated from
-   the BigQuery result by comparing sequence numbers
+   the BigQuery result by comparing timestamps or other metadata
 1. Polls BigQuery for more data if the next message on the subscription
-   indicates a gap in sequence numbers (likely a data loading delay)
+   indicates a gap in timestamps (likely a data loading delay)
 1. Once the subscription is reconciled, immediately forwards new messages from
    the subscription to the client, decrypting the payload as needed
 
