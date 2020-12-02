@@ -50,13 +50,12 @@ Identity management will be provided by IDP.
 
 ### Deliverables
 
-* Register an account with IDP and configure the minimum components.
-* Re-engineer client side code to work with IDP
-* Re-engineer API side code to work with IDP
-* Build a migration tool to move users, roles and permissions to IDP database.
-* Attempt the deploy on staging and test.
-* Security audit/test for leaks.
-* Deploy to production.
+* 2020-12-15: Become a user of an IDP service with the ability to configure and
+  provision an identity management solution.
+* 2020-12-15: Relay user records exist in both the users table and user
+  references table. Some users can exist in IDP.
+* 2021-01-15: Relay users will register and use relay via the IDP with the
+  optional ability to use social account OAuth credentials.
 
 ### Operational impact
 
@@ -74,15 +73,17 @@ TBD
 
 #### Authorization (authn) interface
 
-The authn interface will be an implementation of our existing `UserManager` and
-`AccountManager` interfaces. Both of these interface behaviors will change and
-become unions of new `Reference` types for both users and accounts.
+The authn interface will be an implementation of our existing `UserManager`
+interface and `User` will become `UserReference`.
 
-`User` and `Account` will eventually be deleted. 
+`User` will eventually be deleted. 
+`Account` will eventually be updated to include an `external_id` field for
+enterprise accounts that are managed through the IDP.
 
-Two new tables and management interfaces will be introduced to reference the
-remote objects in the IDP. These new data models will reside in Relay's Postgres
-database.
+One new table and one new management interface will be introduced to reference
+the remote user objects in the IDP.
+
+This new data model will reside in Relay's Postgres database.
 
 ```go
 type UserReferenceManager interface {
@@ -102,27 +103,9 @@ type UserReference struct {
     CreatedAt time.Time
     UpdatedAt *time.Time
 }
-
-type TenantReferenceManager interface {
-    Create
-    Delete
-    All
-    GetByID
-    GetByExternalID
-}
-
-// TenantReference is a data model for a record inside the tenant_refernces table.
-type TenantReference struct {
-    // ID is the internal database ID
-    ID string
-    // ExternalID is the id provided by the IDP
-    ExternalID string
-    CreatedAt time.Time
-    UpdatedAt *time.Time
-}
 ```
 
-UserManager changes include removing methods and repurposing implementations to
+`UserManager` changes include removing methods and repurposing implementations to
 call IDP APIs instead of loading records from the internal database.
 
 * REMOVE `UserManager.Create`
@@ -148,15 +131,19 @@ We would load permissions into the current Granter interface the same, but the
 `PermissionManager` will be removed and `RoleManager` will be refactored to make
 changes to a user's via the IDP API.
 
+#### Engineering action items
+
+* Register an account with IDP and configure the minimum components.
+* Re-engineer client side code to work with IDP
+* Re-engineer API side code to work with IDP
+* Build a migration tool to move users, roles and permissions to IDP database.
+* Attempt the deploy on staging and test.
+* Security audit/test for leaks.
+* Deploy to production.
+
 #### Data migration
 
-**NOTE** do NOT remove users, accounts, permissions and roles tables just yet.
-
-I don't think it would be worthwhile to migrate either staging or production
-without downtime, so I propose we announce and schedule downtime for the
-deployment. This will allow us to verify the user accounts, tenants and RBAC
-have been migrated successfully and the relevant reference tables have been
-synchronized.
+**NOTE** do NOT remove users, permissions and roles tables just yet.
 
 Below outlines the multi-deploy phased rollout of the migration.
 
@@ -164,25 +151,19 @@ Below outlines the multi-deploy phased rollout of the migration.
 for username/password authentication and setup the base-RBAC structure that most
 tenants will use.
 
-**Deploy 1**: We create the `*_references` tables with a schema migration and
-run a data migration to copy all the relevant IDs into those tables, leaving
-`external_id` empty. This deploy contains code to copy the ID for any new
-Account and User records created before the next deploy into those tables.
+**Deploy 1**: We create the `user_references` table with a schema migration and
+run a data migration to copy all the relevant IDs into that table, leaving
+`external_id` empty. This deploy contains code to copy the ID for any new User
+records created before the next deploy into that table.
 
-**Deploy 2**: We start the scheduled downtime and deploy a version of the API
-that contains a migration to do the following:
+**Deploy 2**: Start creating and authenticating users via IDP and Relay
+Database. User accounts will be an upsert when a session is used or created in
+the API. This is an automated migration path. New users will register through
+the IDP registration form.
 
-* Generate a tenant in IDP for each Relay account.
-* Generate a JSON dump of Relay users (users.json) matching IDP's bulk import
-  schema.
-    - include email, password_hash, profile, preferences and current
-      roles/permissions.
-* Request import job using IDP API -- sends users.json.
-* Check import job status until complete.
-* Cleanup users.json.
-* Use IDP API to retrieve bulk user and tenant records to synchronize
-  `*_reference` tables with IDP `external_id` for the entity.
-* Once complete, end scheduled downtime.
+**Future deploy**: All remaining users who aren't in the IDP will be migrated
+with a bulk import and the Relay users table will be deprecated and removed. The
+Relay app login form will be deprecated and removed.
 
 ## Rationale and alternatives
 
