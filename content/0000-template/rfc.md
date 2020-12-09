@@ -41,7 +41,8 @@ with features that are currently underway.]
 
 [If the scope of the work in this RFC is to take longer than a single
 engineering sprint, include specific deliverables, ideally one or more for each
-sprint.]
+sprint. Ensure each deliverable represents a complete, usable piece of
+functionality, not just a work stream or list of tasks.]
 
 * [Insert date of deliverable, in T+*X* weeks format]: [Describe the
   deliverable, including changes and refactors required from previous
