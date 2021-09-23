@@ -1,5 +1,11 @@
 # Layout of an integration (2020-04-07)
 
+## Metadata
+
+### Updated by
+
+* [Upstream versioning for integrations (2021-09-16)](../0000-integration-upstream-versioning/rfc.md)
+
 ## Stakeholders
 
 * **Recommenders:** Noah Fontes
@@ -646,7 +652,7 @@ The second phase replaces our GitHub template repository with a set of Relay CLI
 commands. We also deprecate Spindle in favor of Relay CLI commands.
 
 We add the following commands to the Relay CLI (also see [RFC
-0004](https://github.com/puppetlabs/nebula/blob/master/rfcs/content/0004-relay-cli/rfc.md)):
+0004](../0004-relay-cli/rfc.md)):
 
 * `relay integration init [integration-name]`: Scaffolds an integration using
   our prescribed directory layout.
