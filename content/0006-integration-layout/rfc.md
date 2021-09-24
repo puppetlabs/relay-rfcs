@@ -1,5 +1,11 @@
 # Layout of an integration (2020-04-07)
 
+## Metadata
+
+### Updated by
+
+* [Connections in integrations (2021-06-15)](../0000-integration-connections/rfc.md)
+
 ## Stakeholders
 
 * **Recommenders:** Noah Fontes
